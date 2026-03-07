@@ -1,0 +1,84 @@
+📘 Guía para comenzar a trabajar (José)
+Suposiciones:
+El repositorio ya está clonado
+La rama FrontJose ya existe en Git
+El frontend está en la carpeta Num-Front
+
+
+1️⃣ Ir a la raíz del proyecto
+Abrir terminal en la carpeta del proyecto.
+cd proyecto
+Ejemplo estructura:
+proyecto
+│
+├── backend/
+├── Num-Front/
+├── README.md
+└── .gitignore
+
+
+2️⃣ Traer información actualizada del repositorio
+git fetch origin
+Esto actualiza todas las ramas remotas.
+
+
+3️⃣ Cambiarse a la rama de José
+git checkout FrontJose
+Si la rama no existe localmente, crearla desde el remoto:
+git checkout -b FrontJose origin/FrontJose
+
+
+4️⃣ Traer los últimos cambios de su rama
+git pull origin FrontJose
+
+
+5️⃣ Traer cambios del backend (main)
+Primero actualizar main:
+git checkout main
+git pull origin main
+
+
+6️⃣ Volver a la rama de José y mezclar cambios
+git checkout FrontJose
+git merge main
+Así José tendrá lo último del backend.
+
+
+7️⃣ Entrar al frontend
+cd Num-Front
+
+8️⃣ Instalar dependencias (solo la primera vez)
+npm install
+
+9️⃣ Ejecutar el proyecto
+npm run dev
+Vite mostrará algo como:
+Local: http://localhost:5173
+
+
+🔟 Guardar cambios de José
+Cuando José haga cambios:
+
+git add .
+git commit -m "avance frontend jose"
+git push origin FrontJose
+
+Esto sube cambios solo a la rama FrontJose.
+
+
+
+🧠 Flujo rápido para José
+Cada vez que empiece a trabajar:
+git fetch origin
+git checkout FrontJose
+git pull origin FrontJose
+git checkout main
+git pull origin main
+git checkout FrontJose
+git merge main
+cd Num-Front
+npm run dev
+
+✅ main → backend
+✅ FrontDiego → frontend Diego
+✅ FrontJose → frontend José
