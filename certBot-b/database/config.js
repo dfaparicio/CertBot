@@ -1,11 +1,13 @@
 import mongoose from 'mongoose';
 
-export const dbConnection = async () => {
+const conectarMongo = async () => {
     try {
         await mongoose.connect(process.env.MONGODB_CNX);
-        console.log('Base de datos online');
+        console.log('✅ Base de datos online');
     } catch (error) {
         console.error(error);
         throw new Error('Error a la hora de iniciar la base de datos');
     }
-};
+};          
+
+export default conectarMongo;

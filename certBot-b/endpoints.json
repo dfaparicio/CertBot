@@ -1,0 +1,62 @@
+{
+    "base_url": "http://localhost:3000/api",
+    "endpoints": [
+        {
+            "name": "Login Supervisor",
+            "path": "/auth/login",
+            "method": "POST",
+            "description": "Autenticación para supervisores",
+            "body": {
+                "correo": "supervisor@correo.com",
+                "password": "123456"
+            }
+        },
+        {
+            "name": "Registro Contratista",
+            "path": "/auth/registro",
+            "method": "POST",
+            "description": "Registro de nuevos contratistas en el sistema",
+            "body": {
+                "tipo_documento": "CC",
+                "numero_documento": "1234567890",
+                "fecha_expedicion": "2020-01-15",
+                "eps": "Sanitas",
+                "tipo_afiliado": "Cotizante",
+                "correo": "contratista@correo.com",
+                "password": "123456"
+            }
+        },
+        {
+            "name": "Crear Reporte",
+            "path": "/reporte/crear",
+            "method": "POST",
+            "description": "Crea un nuevo reporte en la colección correspondiente (MiPlanilla, Soi, AportesEnLinea, Asopagos)",
+            "body": {
+                "pagina": "Soi",
+                "contratistaId": "65e8a4d2f1a23b4c5d6e7f89",
+                "ano": 2024,
+                "mes_inicio": "Marzo",
+                "mes_final": "Marzo",
+                "dia": 15,
+                "usted_es": 0,
+                "numero_planilla": "948576032",
+                "pago_planilla": "2024-03-15",
+                "periodo_salud": "2024-02",
+                "valor_planilla": 350000,
+                "tipo_certificado": 0,
+                "tipo_reporte": 1
+            }
+        },
+        {
+            "name": "Actualizar Reporte",
+            "path": "/reporte/actualizar/:reporteId",
+            "method": "PUT",
+            "description": "Actualiza datos de un reporte o marca el estado de descarga (usado por el bot)",
+            "body": {
+                "pagina": "Soi",
+                "estado_descarga": true,
+                "pagina_bot": "http://servidor-certificados.com/pdf/reporte_123.pdf"
+            }
+        }
+    ]
+}
