@@ -1,4 +1,4 @@
-import Reporte from '../models/Reporte.js';
+import Contratista from '../models/Contratista.js';
 import bcrypt from 'bcryptjs';
 
 export const registroContratista = async (req, res, next) => {
@@ -6,10 +6,10 @@ export const registroContratista = async (req, res, next) => {
         const { tipo_documento, numero_documento, fecha_expedicion, eps, tipo_afiliado, correo, password } = req.body;
 
         // Verificar si ya existe un contratista con ese correo o número de documento
-        const existeContratista = await Reporte.findOne({
+        const existeContratista = await Contratista.findOne({
             $or: [
-                { 'usuarios.correo': correo },
-                { 'usuarios.numero_documento': numero_documento }
+                { correo },
+                { numero_documento }
             ]
         });
 
@@ -24,36 +24,28 @@ export const registroContratista = async (req, res, next) => {
         const salt = bcrypt.genSaltSync(10);
         const passwordEncriptado = bcrypt.hashSync(password, salt);
 
-        const nuevoContratista = {
+        const nuevoContratista = new Contratista({
             tipo_documento,
             numero_documento,
             fecha_expedicion,
             eps,
             tipo_afiliado,
             correo,
-            password: passwordEncriptado,
-            historial_reportes: []
-        };
+            password: passwordEncriptado
+        });
 
-        // Insertar en el array de usuarios (upsert crea el documento si no existe)
-        const reporte = await Reporte.findOneAndUpdate(
-            {},
-            { $push: { usuarios: nuevoContratista } },
-            { new: true, upsert: true }
-        );
-
-        const contratistaCreado = reporte.usuarios[reporte.usuarios.length - 1];
+        await nuevoContratista.save();
 
         res.status(201).json({
             ok: true,
             msg: 'Contratista registrado exitosamente',
             contratista: {
-                _id: contratistaCreado._id,
-                tipo_documento: contratistaCreado.tipo_documento,
-                numero_documento: contratistaCreado.numero_documento,
-                eps: contratistaCreado.eps,
-                tipo_afiliado: contratistaCreado.tipo_afiliado,
-                correo: contratistaCreado.correo
+                _id: nuevoContratista._id,
+                tipo_documento: nuevoContratista.tipo_documento,
+                numero_documento: nuevoContratista.numero_documento,
+                eps: nuevoContratista.eps,
+                tipo_afiliado: nuevoContratista.tipo_afiliado,
+                correo: nuevoContratista.correo
             }
         });
     } catch (error) {

@@ -29,11 +29,11 @@ export const validarRegistro = [
     check('fecha_expedicion', 'La fecha de expedición es obligatoria').not().isEmpty(),
     check('fecha_expedicion', 'Debe ser una fecha válida').isISO8601(),
     check('eps', 'La entidad de salud (EPS) es obligatoria').not().isEmpty(),
-    check('tipo_afiliado', 'El tipo de afiliado es obligatorio').not().isEmpty(),
-    check('tipo_afiliado', 'Tipo de afiliado no válido').isIn(['Cotizante', 'Pensionado']),
     check('correo', 'El correo es obligatorio').not().isEmpty(),
     check('correo', 'Debe ser un correo válido').isEmail(),
     check('password', 'La contraseña es obligatoria').not().isEmpty(),
     check('password', 'La contraseña debe tener al menos 6 caracteres').isLength({ min: 6 }),
     validarCampos
 ];
+
+
