@@ -1,0 +1,21 @@
+:root {
+  --sena-green: #39A900;
+  --sena-green-dark: #2d8500;
+  --sena-green-light: #e8f5e9;
+  --sena-orange: #FF6B00;
+  --sena-white: #FFFFFF;
+  --sena-gray-100: #F9F9F9;
+  --sena-gray-200: #F4F4F4;
+  --sena-gray-300: #E0E0E0;
+  --sena-gray-700: #616161;
+  --sena-gray-900: #2F2F2F;
+  --sena-font-main: 'Inter', 'Segoe UI', Roboto, sans-serif;
+  --sena-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --sena-radius: 8px;
+}
+
+body {
+  background-color: var(--sena-gray-200);
+  color: var(--sena-gray-900);
+  font-family: var(--sena-font-main);
+}
