@@ -1,0 +1,136 @@
+/* register.css - Diseño Institucional SENA */
+.register-page {
+  background: var(--bg-app);
+  min-height: 100vh;
+}
+
+.register-header {
+  background: #FFFFFF !important;
+  color: var(--sena-navy) !important;
+}
+
+.brand-title {
+  font-weight: 800;
+  color: var(--sena-navy);
+  font-size: 1.5rem;
+}
+
+.brand-title span {
+  color: var(--sena-green);
+}
+
+/* --- Container & Card --- */
+.register-container {
+  width: 100%;
+  max-width: 1000px;
+  padding: 60px 24px;
+}
+
+.register-card {
+  background: white;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+}
+
+.card-accent-bar {
+  height: 8px;
+  background: linear-gradient(to right, var(--sena-green), var(--sena-green-dark));
+}
+
+.register-hero {
+  background: linear-gradient(135deg, var(--sena-navy) 0%, #004b73 100%);
+  padding: 60px 40px;
+  color: white;
+  text-align: center;
+}
+
+.register-hero h1 {
+  font-size: 2.5rem;
+  font-weight: 900;
+  margin-bottom: 12px;
+  letter-spacing: -0.05em;
+  line-height: 1.1;
+  color: #FFFFFF;
+}
+
+/* --- Form Fields --- */
+.form-section-title {
+  font-size: 0.875rem;
+  font-weight: 800;
+  color: var(--sena-green);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 24px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #F1F5F9;
+}
+
+.input-label {
+  font-weight: 700;
+  color: var(--sena-navy);
+  margin-bottom: 8px;
+  font-size: 0.875rem;
+}
+
+:deep(.q-field--outlined .q-field__control) {
+  border-radius: 12px;
+  background: #F8FAFC;
+  transition: all 0.3s ease;
+  border-color: #E2E8F0;
+}
+
+:deep(.q-field--outlined .q-field__control:hover) {
+  border-color: var(--sena-green);
+  background: #F1F5F9;
+}
+
+:deep(.q-field--focused .q-field__control) {
+  border-color: var(--sena-green) !important;
+  background: white !important;
+  box-shadow: 0 0 0 4px rgba(57, 169, 0, 0.1);
+}
+
+:deep(.q-field__native), :deep(.q-field__input) {
+  color: var(--sena-navy) !important;
+}
+
+/* --- Buttons --- */
+.btn-register-submit {
+  background: var(--sena-green) !important;
+  color: white !important;
+  font-weight: 800;
+  padding: 16px;
+  border-radius: var(--radius-md);
+  transition: all 0.4s ease;
+}
+
+.btn-register-submit:hover {
+  background: var(--sena-green-dark) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px -5px rgba(57, 169, 0, 0.4);
+}
+
+.login-redirect {
+  text-align: center;
+  margin-top: 32px;
+}
+
+.login-link {
+  color: var(--sena-green);
+  font-weight: 800;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.login-link:hover {
+  color: var(--sena-navy);
+}
+
+.register-footer {
+  background: white;
+  color: var(--text-muted);
+  border-top: 1px solid #E2E8F0;
+  padding: 32px;
+}

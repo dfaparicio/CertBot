@@ -1,0 +1,86 @@
+/* supervisor.css - Dashboard Administrativo de Alto Nivel */
+.sidebar-container {
+  background: #FFFFFF !important;
+  border-right: 1px solid var(--border-color);
+}
+
+.sidebar-brand {
+  border-bottom: 1px solid var(--border-color);
+  padding: 30px 24px;
+}
+
+/* Nav Items */
+.nav-item {
+  margin: 4px 12px;
+  border-radius: 12px;
+  font-weight: 600;
+  color: var(--sena-navy);
+  transition: all 0.2s ease;
+}
+
+.nav-item:hover {
+  background: var(--bg-app);
+}
+
+/* KPI Cards */
+.stat-card {
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+  background: white;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.stat-card:hover {
+  transform: translateY(-5px);
+  border-color: var(--sena-green);
+  box-shadow: var(--shadow-md);
+}
+
+.stat-icon-box {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Tabla de Gestión */
+.dashboard-table {
+  background: white;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+}
+
+:deep(.q-table thead tr th) {
+  font-weight: 800;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  letter-spacing: 0.05em;
+  color: var(--sena-navy);
+  background: #F8FAFC;
+  padding: 18px;
+}
+
+:deep(.q-table tbody tr td) {
+  padding: 16px;
+  font-size: 0.85rem;
+  color: var(--text-main);
+}
+
+/* Estados */
+.status-chip {
+  font-weight: 800;
+  font-size: 0.7rem;
+  letter-spacing: 0.02em;
+}
+
+.bg-soft-green { background: #E8F5E9; color: #2E7D32; }
+.bg-soft-orange { background: #FFF3E0; color: #EF6C00; }
+
+.btn-primary-sena {
+  background: var(--sena-green) !important;
+  color: white !important;
+  font-weight: 700;
+  border-radius: 50px;
+}

@@ -1,0 +1,77 @@
+/* report.css - Estilos Profesionales SENA (Resumen Dinámico) */
+.report-layout {
+  max-width: 1200px;
+  width: 100%;
+}
+
+.border-grey {
+  border: 1px solid var(--border-color);
+}
+
+.shadow-soft {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+}
+
+/* Tarjeta Informativa Lateral */
+.info-card-pago {
+  background: #FFFFFF !important;
+  color: #1E293B !important;
+  height: 100%;
+  border: 1px solid var(--border-color) !important;
+}
+
+.resumen-lista {
+  margin-top: 20px;
+}
+
+.resumen-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px dashed var(--border-color);
+}
+
+.resumen-item:last-child {
+  border-bottom: none;
+}
+
+.resumen-item .label {
+  font-weight: 700;
+  color: var(--sena-navy);
+  font-size: 0.85rem;
+}
+
+.resumen-item .value {
+  color: var(--text-muted);
+  font-weight: 500;
+  font-size: 0.85rem;
+}
+
+/* Caja de Resumen de Valor */
+.valor-resumen-box {
+  background: var(--sena-navy);
+  padding: 24px;
+  border-radius: 12px;
+  text-align: center;
+  margin-top: 24px;
+  color: #FFFFFF !important;
+  box-shadow: 0 4px 12px rgba(0, 50, 77, 0.2);
+}
+
+.valor-resumen-box .text-h5 {
+  color: #FFFFFF !important;
+  font-weight: 900;
+  margin-top: 8px;
+}
+
+.border-dashed {
+  border: 2px dashed var(--border-color);
+}
+
+/* Ajustes de Formulario */
+.btn-primary-sena {
+  background: var(--sena-green) !important;
+  color: white !important;
+  font-weight: 700;
+  border-radius: 8px;
+}
