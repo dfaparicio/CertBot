@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken';
-import Supervisor from '../models/supervisor.js';
+import Supervisor from '../models/Supervisor.js';
 
 export const validarJWT = async (req, res, next) => {
     const token = req.header('x-token');

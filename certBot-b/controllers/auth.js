@@ -1,4 +1,4 @@
-import Supervisor from '../models/supervisor.js';
+import Supervisor from '../models/Supervisor.js';
 import Contratista from '../models/Contratista.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
