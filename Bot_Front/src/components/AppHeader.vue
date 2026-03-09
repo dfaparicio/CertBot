@@ -2,12 +2,9 @@
   <header class="app-header">
     <div class="header-container">
       <div class="header-logo">
-        <div class="logo-box">
-          <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/83/Sena_Colombia_logo.svg/1024px-Sena_Colombia_logo.svg.png" alt="Logo" class="logo-img">
-        </div>
         <div class="header-brand">
-          <h1 class="header-title">CertBot</h1>
-          <span class="header-subtitle">Gestión de Aportes</span>
+          <h1 class="header-title">Cert<span>Bot</span></h1>
+          <span class="header-subtitle">Sistema de Gestión y Revisión de Pagos</span>
         </div>
       </div>
       
@@ -15,7 +12,7 @@
         <slot name="actions">
           <div class="header-user" v-if="userName">
             <span class="user-name">{{ userName }}</span>
-            <q-avatar size="36px" color="primary" text-color="white">
+            <q-avatar size="36px" class="bg-sena-green text-white">
               {{ userName.charAt(0).toUpperCase() }}
             </q-avatar>
           </div>
@@ -27,23 +24,26 @@
 
 <script setup>
 defineProps({
-  userName: String
+  userName: {
+    type: String,
+    default: ''
+  }
 })
 </script>
 
 <style scoped>
 .app-header {
-  background: var(--sena-white);
-  border-bottom: 2px solid var(--sena-green);
-  padding: 12px 0;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  background: #FFFFFF;
+  border-bottom: 1px solid var(--border-color);
+  padding: 16px 0;
+  box-shadow: var(--shadow-sm);
   position: sticky;
   top: 0;
   z-index: 1000;
 }
 
 .header-container {
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
   padding: 0 24px;
   display: flex;
@@ -54,48 +54,62 @@ defineProps({
 .header-logo {
   display: flex;
   align-items: center;
-  gap: 16px;
-}
-
-.logo-box {
-  width: 48px;
-  height: 48px;
-}
-
-.logo-img {
-  width: 100%;
-  height: auto;
+  cursor: pointer;
 }
 
 .header-brand {
   display: flex;
   flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
 }
 
 .header-title {
-  margin: 0;
-  font-size: 1.4rem;
-  font-weight: 800;
-  color: var(--sena-gray-900);
-  line-height: 1;
+  margin: 0 !important;
+  padding: 0 !important;
+  line-height: 0.85 !important; /* Ajuste extremo para eliminar espacio vertical */
+  font-size: 1.8rem;
+  font-weight: 900;
+  color: var(--sena-navy);
+  letter-spacing: -0.03em;
+}
+
+.header-title span {
+  color: var(--sena-green);
 }
 
 .header-subtitle {
-  font-size: 0.8rem;
-  color: var(--sena-green);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  margin: 0 !important;
+  padding: 0 !important;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 700;
+  line-height: 1;
+  margin-top: 2px !important; /* Control manual del espacio */
 }
 
 .header-user {
   display: flex;
   align-items: center;
   gap: 12px;
+  padding: 6px 12px;
+  background: var(--bg-app);
+  border-radius: 50px;
+  border: 1px solid var(--border-color);
 }
 
 .user-name {
-  font-weight: 600;
-  color: var(--sena-gray-700);
+  font-weight: 700;
+  color: var(--sena-navy);
+  font-size: 0.875rem;
+}
+
+.bg-sena-green {
+  background-color: var(--sena-green) !important;
+}
+
+@media (max-width: 600px) {
+  .user-name { display: none; }
+  .header-title { font-size: 1.4rem; }
 }
 </style>

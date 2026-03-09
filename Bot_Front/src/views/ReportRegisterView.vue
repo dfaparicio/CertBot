@@ -6,105 +6,108 @@
         <div class="report-layout">
           
           <div class="text-center q-mb-xl">
-            <h1 class="text-h4 text-weight-bolder text-grey-9 q-mb-xs">Generar Reporte de Pago</h1>
-            <p class="text-subtitle1 text-grey-7">Ingrese los datos exactos de su planilla de seguridad social.</p>
+            <h1 class="text-h4 text-weight-bolder text-sena-blue q-mb-xs" style="color: var(--sena-navy) !important;">Generar Reporte de Pago</h1>
+            <p class="text-subtitle1 text-grey-7" style="color: var(--text-muted) !important;">Ingrese los datos exactos de su planilla de seguridad social.</p>
           </div>
 
-          <div class="row q-col-gutter-xl">
-            <div class="col-12 col-md-8">
-              <AppCard>
+          <div class="row justify-center">
+            <div class="col-12 col-md-9">
+              <AppCard class="no-shadow border-grey">
                 <q-form @submit.prevent="submitReporte" class="q-gutter-y-sm">
                   
                   <div class="col-12 q-mb-lg">
-                    <AppInput 
+                    <div class="text-weight-bold q-mb-xs text-sena-blue" style="color: var(--sena-navy) !important;">Plataforma de Pago</div>
+                    <q-select 
                       v-model="formData.pagina" 
-                      type="select" 
-                      label="Plataforma de Pago" 
+                      outlined
+                      dense
                       :options="opcionesPlataforma" 
                       emit-value 
                       map-options 
                       :rules="[v => !!v || 'Seleccione una plataforma']"
+                      bg-color="white"
+                      style="color: var(--sena-navy) !important;"
                     >
                       <template #prepend><q-icon name="language" color="primary" /></template>
-                    </AppInput>
+                    </q-select>
                   </div>
 
                   <div v-if="formData.pagina" class="row q-col-gutter-md">
                     
-                    <!-- FECHA SEPARADA -->
+                    <!-- FECHA COMÚN -->
                     <div class="col-12 col-sm-4">
-                      <AppInput v-model.number="formData.dia" type="number" label="Día del Pago" placeholder="1-31" :rules="[v => (v > 0 && v <= 31) || 'Día inválido']" />
-                    </div>
-                    <div class="col-12 col-sm-4">
-                      <AppInput v-model="formData.mes_inicio" type="select" label="Mes" :options="meses" emit-value map-options :rules="[v => !!v || 'Requerido']" />
+                      <div class="text-weight-bold q-mb-xs text-sena-blue" style="color: var(--sena-navy) !important;">Día del Pago</div>
+                      <q-input v-model.number="formData.dia" type="number" outlined dense placeholder="1-31" :rules="[v => (v > 0 && v <= 31) || 'Día inválido']" bg-color="white" />
                     </div>
                     <div class="col-12 col-sm-4">
-                      <AppInput v-model.number="formData.ano" type="number" label="Año" :rules="[v => !!v || 'Requerido']" />
+                      <div class="text-weight-bold q-mb-xs text-sena-blue" style="color: var(--sena-navy) !important;">Mes Inicio</div>
+                      <q-select v-model="formData.mes_inicio" outlined dense :options="meses" emit-value map-options :rules="[v => !!v || 'Requerido']" bg-color="white" />
+                    </div>
+                    <div class="col-12 col-sm-4">
+                      <div class="text-weight-bold q-mb-xs text-sena-blue" style="color: var(--sena-navy) !important;">Año</div>
+                      <q-input v-model.number="formData.ano" type="number" outlined dense :rules="[v => !!v || 'Requerido']" bg-color="white" />
                     </div>
 
-                    <!-- CAMPOS DINÁMICOS -->
-                    <div v-if="camposExtra.includes('mes_final')" class="col-12 col-sm-6">
-                      <AppInput v-model="formData.mes_final" type="select" label="Mes Final" :options="meses" emit-value map-options :rules="[v => !!v || 'Requerido']" />
+                    <!-- CAMPOS SEGÚN PLATAFORMA -->
+                    <div class="col-12 col-sm-6">
+                      <div class="text-weight-bold q-mb-xs text-sena-blue" style="color: var(--sena-navy) !important;">Mes Final</div>
+                      <q-select v-model="formData.mes_final" outlined dense :options="meses" emit-value map-options :rules="[v => !!v || 'Requerido']" bg-color="white" />
                     </div>
 
-                    <div v-if="camposExtra.includes('usted_es')" class="col-12 col-sm-6">
-                      <AppInput v-model="formData.usted_es" type="select" label="Usted es..." :options="opUstedEs" emit-value map-options />
+                    <div v-if="formData.pagina === 'Aportes en Línea'" class="col-12 col-sm-6">
+                      <div class="text-weight-bold q-mb-xs text-sena-blue" style="color: var(--sena-navy) !important;">Usted es...</div>
+                      <q-select v-model="formData.usted_es" outlined dense :options="opUstedEs" emit-value map-options bg-color="white" />
                     </div>
 
-                    <div v-if="camposExtra.includes('numero_planilla')" class="col-12 col-sm-6">
-                      <AppInput v-model="formData.numero_planilla" label="Número de Planilla" :rules="[v => !!v || 'Requerido']" />
+                    <div v-if="formData.pagina === 'Mi Planilla'" class="col-12 col-sm-6">
+                      <div class="text-weight-bold q-mb-xs text-sena-blue" style="color: var(--sena-navy) !important;">Número de Planilla</div>
+                      <q-input v-model="formData.numero_planilla" outlined dense :rules="[v => !!v || 'Requerido']" bg-color="white" />
                     </div>
 
-                    <div v-if="camposExtra.includes('pago_planilla')" class="col-12 col-sm-6">
-                      <AppInput v-model="formData.pago_planilla" type="date" label="Fecha de Pago" :rules="[v => !!v || 'Requerido']" />
+                    <div v-if="formData.pagina === 'Mi Planilla'" class="col-12 col-sm-6">
+                      <div class="text-weight-bold q-mb-xs text-sena-blue" style="color: var(--sena-navy) !important;">Fecha de Pago</div>
+                      <q-input v-model="formData.pago_planilla" type="date" outlined dense :rules="[v => !!v || 'Requerido']" bg-color="white" />
                     </div>
 
-                    <!-- VALOR PAGADO (CORREGIDO: Permite cifras grandes sin bloqueos) -->
-                    <div v-if="camposExtra.includes('valor_planilla')" class="col-12 col-sm-6">
-                      <AppInput 
+                    <div v-if="formData.pagina === 'Mi Planilla'" class="col-12 col-sm-6">
+                      <div class="text-weight-bold q-mb-xs text-sena-blue" style="color: var(--sena-navy) !important;">Valor Pagado (COP)</div>
+                      <q-input 
                         v-model.number="formData.valor_planilla" 
                         type="number" 
-                        label="Valor Pagado (COP)" 
+                        outlined 
+                        dense 
                         prefix="$"
-                        placeholder="Ej: 500000"
-                        :rules="[v => !!v || 'Ingrese el valor pagado', v => v > 0 || 'Valor inválido']"
-                      >
-                        <template #append>
-                          <span class="text-caption text-grey-6">COP</span>
-                        </template>
-                      </AppInput>
+                        :rules="[v => !!v || 'Requerido', v => v > 0 || 'Valor inválido']"
+                        bg-color="white"
+                      />
                     </div>
 
-                    <div v-if="camposExtra.includes('tipo_certificado')" class="col-12 col-sm-6">
-                      <AppInput v-model="formData.tipo_certificado" type="select" label="Tipo Certificado" :options="opCert" emit-value map-options />
+                    <div v-if="formData.pagina === 'Asopagos'" class="col-12 col-sm-6">
+                      <div class="text-weight-bold q-mb-xs text-sena-blue" style="color: var(--sena-navy) !important;">Tipo Certificado</div>
+                      <q-select v-model="formData.tipo_certificado" outlined dense :options="opCert" emit-value map-options bg-color="white" />
                     </div>
 
-                    <div v-if="camposExtra.includes('tipo_reporte')" class="col-12 col-sm-6">
-                      <AppInput v-model="formData.tipo_reporte" type="select" label="Opción de Reporte" :options="opRep" emit-value map-options />
+                    <div v-if="formData.pagina === 'Asopagos'" class="col-12 col-sm-6">
+                      <div class="text-weight-bold q-mb-xs text-sena-blue" style="color: var(--sena-navy) !important;">Opción de Reporte</div>
+                      <q-select v-model="formData.tipo_reporte" outlined dense :options="opRep" emit-value map-options bg-color="white" />
                     </div>
 
                   </div>
 
                   <div class="flex justify-end q-mt-xl">
-                    <AppButton type="submit" :loading="loading" size="lg" class="q-px-xl" :disabled="!formData.pagina">
-                      ENVIAR REPORTE
-                    </AppButton>
+                    <q-btn 
+                      type="submit" 
+                      color="primary" 
+                      :loading="loading" 
+                      class="q-px-xl btn-primary-sena" 
+                      no-caps
+                      size="lg"
+                      label="ENVIAR REPORTE"
+                      :disabled="!formData.pagina"
+                    />
                   </div>
 
                 </q-form>
-              </AppCard>
-            </div>
-
-            <div class="col-12 col-md-4">
-              <AppCard class="bg-primary text-white no-border shadow-2">
-                <div class="flex items-center gap-sm q-mb-md">
-                  <q-icon name="payments" size="24px" />
-                  <span class="text-subtitle1 text-weight-bold">Información de Pago</span>
-                </div>
-                <p class="text-body2 opacity-90">Ingrese el valor total pagado sin puntos ni comas. El sistema formateará la cifra automáticamente para su revisión.</p>
-                <div v-if="formData.valor_planilla" class="q-mt-md q-pa-md rounded-borders bg-white text-primary text-h6 text-weight-bolder text-center">
-                  {{ formatCurrency(formData.valor_planilla) }}
-                </div>
               </AppCard>
             </div>
           </div>
@@ -117,37 +120,50 @@
 
 <script setup>
 import { reactive, ref, computed } from 'vue'
-import { postData } from '@/services/api'
-import { useAuthStore } from '@/store/auth'
-import { notifySuccess, notifyError, showLoading, hideLoading } from '@/utils/notificaciones'
-import AppHeader from '@/components/AppHeader.vue'
-import AppFooter from '@/components/AppFooter.vue'
-import AppCard from '@/components/AppCard.vue'
-import AppInput from '@/components/AppInput.vue'
-import AppButton from '@/components/AppButton.vue'
+import { useRouter } from 'vue-router'
+import { useQuasar } from 'quasar'
+import { postData } from '../services/api'
+import { useMainStore } from '../store/store'
+import AppHeader from '../components/AppHeader.vue'
+import AppFooter from '../components/AppFooter.vue'
+import AppCard from '../components/AppCard.vue'
 
-const authStore = useAuthStore()
+const $q = useQuasar()
+const router = useRouter()
+const store = useMainStore()
 const loading = ref(false)
 
 const formatCurrency = (val) => {
   return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(val)
 }
 
-const configCampos = {
-  'Aportes en Línea': ['mes_final', 'usted_es'],
-  'Mi Planilla': ['numero_planilla', 'pago_planilla', 'valor_planilla'],
-  'SOI': [],
-  'Asopagos': ['tipo_certificado', 'tipo_reporte']
+const getMesNombre = (mesVal) => {
+  const mes = meses.find(m => m.value === mesVal)
+  return mes ? mes.label.charAt(0) + mes.label.slice(1).toLowerCase() : ''
 }
 
+// Opciones de plataforma
+const opcionesPlataforma = [
+  { label: 'Mi Planilla', value: 'Mi Planilla' },
+  { label: 'SOI', value: 'SOI' },
+  { label: 'Aportes en Línea', value: 'Aportes en Línea' },
+  { label: 'Asopagos', value: 'Asopagos' }
+]
+
 const formData = reactive({
-  pagina: '', dia: new Date().getDate(), ano: new Date().getFullYear(),
-  mes_inicio: '', mes_final: '', usted_es: 0, numero_planilla: '',
-  pago_planilla: '', valor_planilla: null, tipo_certificado: 0, tipo_reporte: 0
+  pagina: '', 
+  dia: new Date().getDate(), 
+  ano: new Date().getFullYear(),
+  mes_inicio: '', 
+  mes_final: '', 
+  usted_es: 0, 
+  numero_planilla: '',
+  pago_planilla: '', 
+  valor_planilla: null, 
+  tipo_certificado: 0, 
+  tipo_reporte: 0
 })
 
-const camposExtra = computed(() => configCampos[formData.pagina] || [])
-const opcionesPlataforma = Object.keys(configCampos).map(k => ({ label: k, value: k }))
 const meses = Array.from({length: 12}, (_, i) => ({ 
   label: new Date(0, i).toLocaleString('es', {month: 'long'}).toUpperCase(), 
   value: String(i+1).padStart(2, '0') 
@@ -158,11 +174,19 @@ const opCert = [{label: 'Seguridad Social', value: 0}, {label: 'Cesantías', val
 const opRep = [{label: 'Sin Valores', value: 0}, {label: 'Con Valores', value: 1}]
 
 const submitReporte = async () => {
+  if (!store.user?._id) {
+    $q.notify({ type: 'negative', message: 'Sesión expirada. Por favor inicie sesión.' })
+    router.push('/login')
+    return
+  }
+
   loading.value = true
-  showLoading('Enviando reporte...')
+  
   try {
+    // Construimos el payload con valores por defecto para los campos no visibles según la plataforma
+    // para cumplir con las validaciones de Mongoose (required: true)
     const payload = {
-      contratistaId: authStore.user?._id,
+      contratistaId: store.user._id,
       pagina: formData.pagina,
       dia: Number(formData.dia),
       ano: Number(formData.ano),
@@ -172,24 +196,36 @@ const submitReporte = async () => {
       numero_planilla: formData.numero_planilla || 'N/A',
       pago_planilla: formData.pago_planilla || new Date(),
       periodo_salud: `${formData.ano}-${formData.mes_inicio}`,
-      valor_planilla: Number(formData.valor_planilla),
+      valor_planilla: Number(formData.valor_planilla) || 0,
       tipo_certificado: Number(formData.tipo_certificado),
       tipo_reporte: Number(formData.tipo_reporte)
     }
-    const res = await postData('/reportes/crear', payload)
-    notifySuccess(res.msg)
-    formData.pagina = ''
-  } catch (e) {
-    notifyError(e)
+
+    const res = await postData('/reporte/crear', payload)
+    
+    if (res.ok) {
+      $q.notify({
+        type: 'positive',
+        message: '¡Reporte enviado con éxito!',
+        position: 'top-right'
+      })
+      // Limpiar formulario
+      formData.pagina = ''
+      formData.valor_planilla = null
+    }
+  } catch (error) {
+    console.error('Error al enviar reporte:', error)
+    $q.notify({
+      type: 'negative',
+      message: error.response?.data?.msg || 'Error al conectar con el servidor',
+      position: 'top-right'
+    })
   } finally {
     loading.value = false
-    hideLoading()
   }
 }
 </script>
 
 <style scoped>
-.report-layout { width: 100%; max-width: 1000px; }
-.opacity-90 { opacity: 0.9; }
-.gap-sm { gap: 8px; }
+@import "../styles/report.css";
 </style>

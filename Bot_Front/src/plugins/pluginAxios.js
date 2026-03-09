@@ -1,38 +1,36 @@
 import axios from "axios";
-import { useAuthStore } from "../store/auth.js";
+import { useMainStore } from "../store/store.js";
 
 const axiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "https://nodemongo-ihx8.onrender.com/api",
-  headers: {
-    "Content-Type": "application/json",
-  },
+  baseURL: "http://localhost:3000/api", // Ajusta según tu puerto de backend
 });
 
-// 1. Interceptor de Peticiones
+// Interceptor para peticiones
 axiosInstance.interceptors.request.use(
   (config) => {
-    const authStore = useAuthStore();
-    const token = authStore.token;
+    const store = useMainStore();
+    const token = store.token;
     if (token) {
-      config.headers["x-token"] = token;
+      config.headers["token"] = token;
     }
     return config;
   },
-  (error) => Promise.reject(error),
+  (error) => {
+    return Promise.reject(error);
+  }
 );
 
-// 2. Interceptor de Respuestas (Limpio y seguro)
+// Interceptor para respuestas
 axiosInstance.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && error.response.status === 401) {
-      const authStore = useAuthStore();
-      authStore.token = "";
-      authStore.user = null;
-      // router.push('/login');
+      const store = useMainStore();
+      store.logout();
+      window.location.href = "/login";
     }
     return Promise.reject(error);
-  },
+  }
 );
 
 export default axiosInstance;
