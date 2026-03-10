@@ -76,12 +76,12 @@ export const loginContratista = async (req, res, next) => {
         }
 
         // Generar JWT
-        const token = jwt.sign(
-            { id: contratista._id, correo: contratista.correo, rol: 'CONTRATISTA' },
-            process.env.JWT_SECRET,
-            { expiresIn: '8h' }
-        );
-
+        /*       const token = jwt.sign(
+                  { id: contratista._id, correo: contratista.correo, rol: 'CONTRATISTA' },
+                  process.env.JWT_SECRET,
+                  { expiresIn: '8h' }
+              );
+       */
         res.json({
             ok: true,
             msg: 'Login exitoso',
@@ -90,8 +90,8 @@ export const loginContratista = async (req, res, next) => {
                 numero_documento: contratista.numero_documento,
                 correo: contratista.correo,
                 eps: contratista.eps
-            },
-            token
+            },/* 
+            token */
         });
     } catch (error) {
         next(error);

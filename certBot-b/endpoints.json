@@ -1,62 +1,182 @@
 {
-    "base_url": "http://localhost:3000/api",
-    "endpoints": [
+    "info": {
+        "_postman_id": "8b9e1234-5678-4a1b-9c2d-34c56789abcd",
+        "name": "CertBot API",
+        "description": "Colección de endpoints para el proyecto CertBot SENA (Node.js & Express)",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
         {
-            "name": "Login Supervisor",
-            "path": "/auth/login",
-            "method": "POST",
-            "description": "Autenticación para supervisores",
-            "body": {
-                "correo": "supervisor@correo.com",
-                "password": "123456"
+            "name": "Auth",
+            "item": [
+                {
+                    "name": "Login Supervisor",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"correo\": \"supervisor@correo.com\",\n    \"password\": \"123456\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/auth/login",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "auth",
+                                "login"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Login Contratista",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"correo\": \"contratista@correo.com\",\n    \"password\": \"123456\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/auth/login-contratista",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "auth",
+                                "login-contratista"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Registro Contratista",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"tipo_documento\": \"Cédula de ciudadania\",\n    \"numero_documento\": \"12345678\",\n    \"fecha_expedicion\": \"2010-01-01\",\n    \"eps\": \"Salud Total\",\n    \"tipo_afiliado\": \"Cotizante\",\n    \"correo\": \"contratista@correo.com\",\n    \"password\": \"123456\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/auth/registro",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "auth",
+                                "registro"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Reportes",
+            "item": [
+                {
+                    "name": "Crear Reporte",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"pagina\": \"Mi Planilla\",\n    \"contratistaId\": \"ID_REPLAZAR\",\n    \"ano\": 2024,\n    \"mes_inicio\": \"01\",\n    \"mes_final\": \"01\",\n    \"dia\": 5,\n    \"usted_es\": 0,\n    \"numero_planilla\": \"987654321\",\n    \"pago_planilla\": \"2024-02-05\",\n    \"periodo_salud\": \"01/2024\",\n    \"valor_planilla\": 150000,\n    \"tipo_certificado\": 0,\n    \"tipo_reporte\": 1\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/reporte/crear",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "reporte",
+                                "crear"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Automatizar Bot",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"reporteId\": \"ID_REAL_DEL_REPORTE\",\n    \"pagina\": \"Mi Planilla\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/reporte/automatizar",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "reporte",
+                                "automatizar"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        }
+    ],
+    "event": [
+        {
+            "listen": "prerequest",
+            "script": {
+                "type": "text/javascript",
+                "exec": [
+                    ""
+                ]
             }
         },
         {
-            "name": "Registro Contratista",
-            "path": "/auth/registro",
-            "method": "POST",
-            "description": "Registro de nuevos contratistas en el sistema",
-            "body": {
-                "tipo_documento": "CC",
-                "numero_documento": "1234567890",
-                "fecha_expedicion": "2020-01-15",
-                "eps": "Sanitas",
-                "tipo_afiliado": "Cotizante",
-                "correo": "contratista@correo.com",
-                "password": "123456"
+            "listen": "test",
+            "script": {
+                "type": "text/javascript",
+                "exec": [
+                    ""
+                ]
             }
-        },
+        }
+    ],
+    "variable": [
         {
-            "name": "Crear Reporte",
-            "path": "/reporte/crear",
-            "method": "POST",
-            "description": "Crea un nuevo reporte en la colección correspondiente (MiPlanilla, Soi, AportesEnLinea, Asopagos)",
-            "body": {
-                "pagina": "Soi",
-                "contratistaId": "65e8a4d2f1a23b4c5d6e7f89",
-                "ano": 2024,
-                "mes_inicio": "Marzo",
-                "mes_final": "Marzo",
-                "dia": 15,
-                "usted_es": 0,
-                "numero_planilla": "948576032",
-                "pago_planilla": "2024-03-15",
-                "periodo_salud": "2024-02",
-                "valor_planilla": 350000,
-                "tipo_certificado": 0,
-                "tipo_reporte": 1
-            }
-        },
-        {
-            "name": "Actualizar Reporte",
-            "path": "/reporte/actualizar/:reporteId",
-            "method": "PUT",
-            "description": "Actualiza datos de un reporte o marca el estado de descarga (usado por el bot)",
-            "body": {
-                "pagina": "Soi",
-                "estado_descarga": true,
-                "pagina_bot": "http://servidor-certificados.com/pdf/reporte_123.pdf"
-            }
+            "key": "base_url",
+            "value": "http://localhost:3000/api",
+            "type": "string"
         }
     ]
 }

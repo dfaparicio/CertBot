@@ -24,7 +24,12 @@ export const validarLogin = [
 // Validaciones para el registro del contratista
 export const validarRegistro = [
     check('tipo_documento', 'El tipo de documento es obligatorio').not().isEmpty(),
-    check('tipo_documento', 'Tipo de documento no válido').isIn(['CC', 'CE', 'TI', 'PP', 'NIT']),
+    check('tipo_documento', 'Tipo de documento no válido').isIn([
+        'CC', 'CE', 'TI', 'PP', 'NIT',
+        'Cédula de ciudadania', 'Cédula de Ciudadanía',
+        'Cédula de extranjería', 'Cédula de Extranjería',
+        'Tarjeta de identidad', 'NIT', 'Pasaporte'
+    ]),
     check('numero_documento', 'El número de documento es obligatorio').not().isEmpty(),
     check('fecha_expedicion', 'La fecha de expedición es obligatoria').not().isEmpty(),
     check('fecha_expedicion', 'Debe ser una fecha válida').isISO8601(),

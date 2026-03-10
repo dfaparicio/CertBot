@@ -48,7 +48,7 @@ export const ejecutarBot = async (req, res, next) => {
 
         // 2. Iniciar el bot
         browser = await chromium.launch({
-            headless: true, // Cambiar a false si quieres ver el proceso
+            headless: false, // Cambiar a false si quieres ver el proceso
             args: ['--no-sandbox', '--disable-setuid-sandbox']
         });
         const context = await browser.newContext();
@@ -94,161 +94,239 @@ export const ejecutarBot = async (req, res, next) => {
 // --- Funciones de Automatización con Selectores Reales ---
 
 async function automatizarAportesEnLinea(page, contratista, reporte) {
-    await page.goto('https://empresas.aportesenlinea.com/Autoservicio/CertificadoAportes.aspx');
+    try {
+        console.log('Navegando a Aportes en Línea...');
+        await page.goto('https://empresas.aportesenlinea.com/Autoservicio/CertificadoAportes.aspx', { waitUntil: 'domcontentloaded' });
 
-    // 1. Pestaña PILA (Generalmente ya seleccionada por defecto)
-    await page.click('label[for="contenido_Pila"]');
+        // 1. Pestaña PILA (Generalmente ya seleccionada por defecto)
+        await page.click('label[for="contenido_Pila"]');
 
-    // 2. Datos de Identificación
-    if (contratista.tipo_documento) {
-        await page.selectOption('select#contenido_ddlTipoIdent', { label: contratista.tipo_documento });
+        // Mapeo seguro para los values del select
+        const tipoIdMapping = {
+            'Cédula de ciudadania': '1',
+            'Cédula de Ciudadanía': '1',
+            'Cédula de extranjería': '2',
+            'Cédula de Extranjería': '2',
+            'Tarjeta de identidad': '3',
+            'NIT': '4' // Asumido, en caso de fallo hará fallback a label
+        };
+        const tipoIdValue = tipoIdMapping[contratista.tipo_documento] || '1';
+
+        // 2. Datos de Identificación
+        console.log('Seleccionando tipo documento...');
+        try {
+            await page.selectOption('select#contenido_ddlTipoIdent', { value: tipoIdValue, timeout: 3000 });
+        } catch (e) {
+            await page.selectOption('select#contenido_ddlTipoIdent', { label: contratista.tipo_documento });
+        }
+
+        console.log('Llenando identificacion...');
+        await page.fill('input#contenido_tbNumeroIdentificacion', contratista.numero_documento);
+
+        // 3. Fecha de Expedición (Formato AAAA/MM/DD)
+        if (contratista.fecha_expedicion) {
+            console.log('Llenando fecha expedicion...');
+            const fechaExp = new Date(contratista.fecha_expedicion);
+            const fechaFormateada = `${fechaExp.getUTCFullYear()}/${(fechaExp.getUTCMonth() + 1).toString().padStart(2, '0')}/${fechaExp.getUTCDate().toString().padStart(2, '0')}`;
+            await page.fill('input#contenido_txtFechaExp', fechaFormateada);
+        }
+
+        // 4. EPS
+        if (contratista.eps) {
+            console.log('Llenando EPS...');
+            await page.fill('input#contenido_txtAdmin', contratista.eps);
+        }
+
+        // 5. Rango de Fechas (Desde - Hasta)
+        if (reporte.ano) {
+            console.log('Llenando año...');
+            const anioStr = reporte.ano.toString();
+            await page.selectOption('select#contenido_ddlAnioIni', anioStr);
+            await page.selectOption('select#contenido_ddlAnioFin', anioStr);
+        }
+
+        if (reporte.mes_inicio) {
+            console.log('Llenando mes inicio...');
+            await page.selectOption('select#contenido_ddlMesIni', parseInt(reporte.mes_inicio, 10).toString().padStart(2, '0'));
+        }
+
+        if (reporte.mes_final) {
+            console.log('Llenando mes fin...');
+            await page.selectOption('select#contenido_ddlMesFin', parseInt(reporte.mes_final, 10).toString().padStart(2, '0'));
+        }
+
+        // 6. Actualmente usted es (Cotizante Activo o Pensionado)
+        console.log('Seleccionando tipo cotizante...');
+        if (contratista.tipo_afiliado === 'Cotizante' || contratista.tipo_afiliado === 'Cotizante activo') {
+            await page.click('label[for="contenido_rdbActivo"]');
+        } else if (contratista.tipo_afiliado === 'Pensionado') {
+            await page.click('label[for="contenido_rdbPensionado"]');
+        }
+
+        console.log('✅ Bot: Datos llenados en Aportes en Línea. Esperando Captcha...');
+    } catch (err) {
+        console.error('❌ Error en automatizarAportesEnLinea:', err.message);
+        throw err;
     }
-    await page.fill('input#contenido_tbNumeroIdentificacion', contratista.numero_documento);
-
-    // 3. Fecha de Expedición (Formato AAAA/MM/DD)
-    if (contratista.fecha_expedicion) {
-        const fechaExp = new Date(contratista.fecha_expedicion);
-        const fechaFormateada = `${fechaExp.getFullYear()}/${(fechaExp.getMonth() + 1).toString().padStart(2, '0')}/${fechaExp.getDate().toString().padStart(2, '0')}`;
-        await page.fill('input#contenido_txtFechaExp', fechaFormateada);
-    }
-
-    // 4. EPS
-    if (contratista.eps) {
-        await page.fill('input#contenido_txtAdmin', contratista.eps);
-    }
-
-    // 5. Rango de Fechas (Desde - Hasta)
-    if (reporte.ano) {
-        const anioStr = reporte.ano.toString();
-        await page.selectOption('select#contenido_ddlAnioIni', anioStr);
-        await page.selectOption('select#contenido_ddlAnioFin', anioStr);
-    }
-
-    if (reporte.mes_inicio) {
-        await page.selectOption('select#contenido_ddlMesIni', reporte.mes_inicio.toString().padStart(2, '0'));
-    }
-
-    if (reporte.mes_final) {
-        await page.selectOption('select#contenido_ddlMesFin', reporte.mes_final.toString().padStart(2, '0'));
-    }
-
-    // 6. Actualmente usted es (Cotizante Activo o Pensionado)
-    if (contratista.tipo_afiliado === 'Cotizante' || contratista.tipo_afiliado === 'Cotizante activo') {
-        await page.click('label[for="contenido_rdbActivo"]');
-    } else if (contratista.tipo_afiliado === 'Pensionado') {
-        await page.click('label[for="contenido_rdbPensionado"]');
-    }
-
-    // El CAPTCHA se deja para el usuario. Botón: a#contenido_btnCalcular
 }
 
 async function automatizarMiPlanilla(page, contratista, reporte) {
-    await page.goto('https://www.miplanilla.com/Private/Consultaplanillaindependiente.aspx');
+    try {
+        console.log('Navegando a Mi Planilla...');
+        await page.goto('https://www.miplanilla.com/Private/Consultaplanillaindependiente.aspx', { waitUntil: 'domcontentloaded' });
 
-    // 1. Datos de Identificación
-    await page.selectOption('select#cp1_ddlTipoDocumento', { label: contratista.tipo_documento });
-    await page.fill('input#cp1_txtNumeroDocumento', contratista.numero_documento);
+        const tipoIdMapping = {
+            'Cédula de ciudadania': 'CC',
+            'Cédula de Ciudadanía': 'CC',
+            'Cédula de extranjería': 'CE',
+            'Cédula de Extranjería': 'CE',
+            'Tarjeta de identidad': 'TI',
+            'NIT': 'NI'
+        };
+        const tipoIdValue = tipoIdMapping[contratista.tipo_documento] || 'CC';
 
-    // 2. Número de Planilla
-    if (reporte.numero_planilla) {
-        await page.fill('input#cp1_txtNumeroPlanilla', reporte.numero_planilla);
+        console.log(`Seleccionando tipo documento (${tipoIdValue})...`);
+        await page.selectOption('select#cp1_ddlTipoDocumento', tipoIdValue);
+
+        console.log('Llenando numero documento...');
+        await page.fill('input#cp1_txtNumeroDocumento', contratista.numero_documento);
+
+        if (reporte.numero_planilla) {
+            console.log('Llenando numero planilla...');
+            await page.fill('input#cp1_txtNumeroPlanilla', reporte.numero_planilla);
+        }
+
+        if (reporte.pago_planilla) {
+            console.log('Llenando fecha de pago de planilla...');
+            const fechaPago = new Date(reporte.pago_planilla);
+            // Día puede venir sin padding
+            await page.selectOption('select#cp1_cmbDiaPago', fechaPago.getUTCDate().toString());
+            await page.selectOption('select#cp1_cmbMesPago', (fechaPago.getUTCMonth() + 1).toString());
+            await page.selectOption('select#cp1_ddlAnoPago', fechaPago.getUTCFullYear().toString());
+        }
+
+        if (reporte.periodo_salud) {
+            console.log('Llenando periodo salud...');
+            const [mes, ano] = reporte.periodo_salud.includes('/')
+                ? reporte.periodo_salud.split('/')
+                : [reporte.mes_inicio, reporte.ano];
+
+            await page.selectOption('select#cp1_ddlMesSalud', parseInt(mes, 10).toString());
+            await page.selectOption('select#cp1_ddlAnoSalud', ano.toString());
+        }
+
+        if (reporte.valor_planilla) {
+            console.log('Llenando valor planilla...');
+            await page.fill('input#cp1_txtValorPagado', reporte.valor_planilla.toString());
+        }
+
+        console.log('✅ Bot: Datos llenados en Mi Planilla. Esperando Captcha...');
+    } catch (err) {
+        console.error('❌ Error en automatizarMiPlanilla:', err.message);
+        throw err;
     }
-
-    // 3. Fecha de pago de la planilla (Día, Mes, Año)
-    if (reporte.pago_planilla) {
-        const fechaPago = new Date(reporte.pago_planilla);
-        // Día: cp1_cmbDiaPago, Mes: cp1_cmbMesPago, Año: cp1_ddlAnoPago
-        await page.selectOption('select#cp1_cmbDiaPago', fechaPago.getDate().toString().padStart(2, '0'));
-        await page.selectOption('select#cp1_cmbMesPago', (fechaPago.getMonth() + 1).toString().padStart(2, '0'));
-        await page.selectOption('select#cp1_ddlAnoPago', fechaPago.getFullYear().toString());
-    }
-
-    // 4. Periodo de pago salud (Mes, Año)
-    if (reporte.periodo_salud) {
-        // El formato en la DB suele ser "MM/YYYY" o similar. Extraemos mes y año.
-        const [mes, ano] = reporte.periodo_salud.includes('/')
-            ? reporte.periodo_salud.split('/')
-            : [reporte.mes_inicio, reporte.ano];
-
-        await page.selectOption('select#cp1_ddlMesSalud', mes.toString().padStart(2, '0'));
-        await page.selectOption('select#cp1_ddlAnoSalud', ano.toString());
-    }
-
-    // 5. Valor pagado
-    if (reporte.valor_planilla) {
-        await page.fill('input#cp1_txtValorPagado', reporte.valor_planilla.toString());
-    }
-
-    // El CAPTCHA (input#cp1_txtCaptcha) se gestionará manualmente o se ignorará por ahora.
 }
 
 async function automatizarSOI(page, contratista, reporte) {
-    await page.goto('https://servicio.nuevosoi.com.co/soi/certificadoAportesCotizante.do');
+    try {
+        console.log('Navegando a SOI...');
+        await page.goto('https://servicio.nuevosoi.com.co/soi/certificadoAportesCotizante.do', { waitUntil: 'domcontentloaded' });
 
-    // 1. Información del Aportante (Suelen ser los mismos datos para independientes)
-    await page.selectOption('select#tipoDocumentoAportante', { label: contratista.tipo_documento });
-    await page.fill('input[name="numeroDocumentoAportante"]', contratista.numero_documento);
+        const tipoIdMapping = {
+            'Cédula de ciudadania': '1',
+            'Cédula de Ciudadanía': '1',
+            'Cédula de extranjería': '3',
+            'Cédula de Extranjería': '3',
+            'Tarjeta de identidad': '6',
+            'NIT': '2'
+        };
+        const tipoIdValue = tipoIdMapping[contratista.tipo_documento] || '1';
 
-    // 2. Información del Cotizante
-    await page.selectOption('select#tipoDocumentoCotizante', { label: contratista.tipo_documento });
-    await page.fill('input#numeroDocumentoCotizante', contratista.numero_documento);
+        // 1. Información del Aportante (Suelen ser los mismos datos para independientes)
+        console.log(`Llenando Aportante (${tipoIdValue})...`);
+        await page.selectOption('select#tipoDocumentoAportante', tipoIdValue);
+        await page.fill('input[name="numeroDocumentoAportante"]', contratista.numero_documento);
 
-    // 3. Entidad de Salud (EPS)
-    if (contratista.eps) {
-        // Intentamos seleccionar por etiqueta (label) ya que la EPS viene como string
-        try {
-            await page.selectOption('select#administradoraSalud', { label: contratista.eps });
-        } catch (e) {
-            console.log(`No se pudo seleccionar la EPS "${contratista.eps}" automáticamente`);
+        // 2. Información del Cotizante
+        console.log(`Llenando Cotizante (${tipoIdValue})...`);
+        await page.selectOption('select#tipoDocumentoCotizante', tipoIdValue);
+        await page.fill('input#numeroDocumentoCotizante', contratista.numero_documento);
+
+        // 3. Entidad de Salud (EPS)
+        if (contratista.eps) {
+            console.log(`Seleccionando EPS (${contratista.eps})...`);
+            try {
+                await page.selectOption('select#administradoraSalud', { label: contratista.eps, timeout: 2000 });
+            } catch (e) {
+                console.log(`No se pudo seleccionar la EPS automáticamente. Intentando mapeo manual en SOI.`);
+            }
         }
+
+        // 4. Periodo de Pago (Mes y Año)
+        console.log('Llenando periodo de pago...');
+        const mes = reporte.mes_inicio || (new Date().getMonth() + 1).toString();
+        const ano = reporte.ano || new Date().getFullYear().toString();
+
+        await page.selectOption('select#periodoLiqSaludMes', parseInt(mes, 10).toString());
+        await page.selectOption('select#periodoLiqSaludAnnio', ano.toString());
+
+        console.log('✅ Bot: Datos llenados en SOI. Esperando acción del usuario para descargar...');
+    } catch (err) {
+        console.error('❌ Error en automatizarSOI:', err.message);
+        throw err;
     }
-
-    // 4. Periodo de Pago (Mes y Año)
-    const mes = reporte.mes_inicio || (new Date().getMonth() + 1).toString();
-    const ano = reporte.ano || new Date().getFullYear().toString();
-
-    await page.selectOption('select#periodoLiqSaludMes', mes.toString().padStart(2, '0'));
-    await page.selectOption('select#periodoLiqSaludAnnio', ano.toString());
-
-    // El botón de descarga es button.btn-success o contiene el texto "Descargar PDF"
 }
 
 async function automatizarAsopagos(page, contratista, reporte) {
-    // Redirigimos directamente al formulario de certificación para evitar la navegación compleja del carrusel
-    await page.goto('https://www.enlace-apb.com/interssi/descargarCertificacionPago.jsp');
+    try {
+        console.log('Navegando a Asopagos...');
+        // Redirigimos directamente al formulario de certificación para evitar la navegación compleja del carrusel
+        await page.goto('https://www.enlace-apb.com/interssi/descargarCertificacionPago.jsp', { waitUntil: 'domcontentloaded' });
 
-    // 1. Tipo de Certificado (0: Seguridad Social, 1: Cesantías)
-    if (reporte.tipo_certificado === 0) {
-        await page.check('input[value="verCertificadoTresNuevo"]');
-    } else if (reporte.tipo_certificado === 1) {
-        await page.check('input[value="verCertificadoCesantias"]');
+        // 1. Tipo de Certificado (0: Seguridad Social, 1: Cesantías)
+        console.log('Seleccionando tipo de certificado...');
+        if (reporte.tipo_certificado === 0) {
+            await page.check('input[value="verCertificadoTresNuevo"]');
+        } else if (reporte.tipo_certificado === 1) {
+            await page.check('input[value="verCertificadoCesantias"]');
+        }
+
+        // 2. Datos de Identificación
+        console.log('Llenando datos de identificacion...');
+        const mapaTipos = {
+            'Cédula de ciudadania': 'CC',
+            'Cédula de Ciudadanía': 'CC',
+            'Cédula de extranjería': 'CE',
+            'Cédula de Extranjería': 'CE',
+            'Tarjeta de identidad': 'TI',
+            'NIT': 'NI',
+            'Pasaporte': 'PA'
+        };
+        const tipoDoc = mapaTipos[contratista.tipo_documento] || 'CC';
+        await page.selectOption('select#tipoID', tipoDoc);
+        await page.fill('input#numeroID', contratista.numero_documento);
+
+        // 3. Año y Mes
+        if (reporte.ano) {
+            console.log('Llenando año...');
+            await page.fill('input#ano', reporte.ano.toString());
+        }
+
+        if (reporte.mes_inicio) {
+            console.log('Llenando mes...');
+            // Asopagos usa formato "01", "02", etc.
+            const mesPad = reporte.mes_inicio.toString();
+            await page.selectOption('select#mes', mesPad);
+        }
+
+        // 4. Tipo de Reporte (0: Sin valores, 1: Con valores)
+        console.log('Llenando tipo de reporte...');
+        const tipoReporte = reporte.tipo_reporte === 1 ? 'conValores' : 'sinValores';
+        await page.selectOption('select#tipoReporte', tipoReporte);
+
+        console.log('✅ Bot: Datos llenados en Asopagos. Esperando Captcha...');
+    } catch (err) {
+        console.error('❌ Error en automatizarAsopagos:', err.message);
+        throw err;
     }
-
-    // 2. Datos de Identificación
-    const mapaTipos = {
-        'Cédula de Ciudadanía': 'CC',
-        'Cédula de Extranjería': 'CE',
-        'NIT': 'NI',
-        'Pasaporte': 'PA'
-    };
-    const tipoDoc = mapaTipos[contratista.tipo_documento] || 'CC';
-    await page.selectOption('select#tipoID', tipoDoc);
-    await page.fill('input#numeroID', contratista.numero_documento);
-
-    // 3. Año y Mes
-    if (reporte.ano) {
-        await page.fill('input#ano', reporte.ano.toString());
-    }
-
-    if (reporte.mes_inicio) {
-        // Asopagos usa formato "01", "02", etc.
-        const mesPad = reporte.mes_inicio.toString().padStart(2, '0');
-        await page.selectOption('select#mes', mesPad);
-    }
-
-    // 4. Tipo de Reporte (0: Sin valores, 1: Con valores)
-    const tipoReporte = reporte.tipo_reporte === 1 ? 'conValores' : 'sinValores';
-    await page.selectOption('select#tipoReporte', tipoReporte);
-
-    // El CAPTCHA (input#captchaIn) se deja para el usuario
 }
