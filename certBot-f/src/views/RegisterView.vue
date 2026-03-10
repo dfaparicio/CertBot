@@ -161,7 +161,7 @@ const formData = reactive({ tipo_documento: '', numero_documento: '', fecha_expe
 
 const opcionesDocumento = [{ label: 'Cédula de Ciudadanía', value: 'CC' }, { label: 'Cédula de Extranjería', value: 'CE' }, { label: 'Pasaporte', value: 'PA' }]
 const opcionesEPS = [{ label: 'Sura', value: 'Sura' }, { label: 'Sanitas', value: 'Sanitas' }, { label: 'Compensar', value: 'Compensar' }, { label: 'Nueva EPS', value: 'Nueva EPS' }, { label: 'Salud Total', value: 'Salud Total' }, { label: 'Famisanar', value: 'Famisanar' }]
-const opcionesAfiliado = [{ label: 'Cotizante', value: 0 }, { label: 'Pensionado', value: 1 }]
+const opcionesAfiliado = [{ label: 'Cotizante', value: 'Cotizante' }, { label: 'Pensionado', value: 'Pensionado' }]
 
 const completarCorreo = (domain) => {
   const parts = formData.correo.split('@')
@@ -174,7 +174,7 @@ const onSubmit = async () => {
     const payload = {
       ...formData,
       numero_documento: String(formData.numero_documento),
-      tipo_afiliado: Number(formData.tipo_afiliado)
+      tipo_afiliado: formData.tipo_afiliado
     }
     const res = await postData('/auth/registro', payload)
     if (res.ok) {
