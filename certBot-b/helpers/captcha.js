@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { escribirHumano } from './automatizacion.js';
+import { escribirHumano } from '../middlewares/automatizacion.js';
 
 export async function resolverCaptcha(page, selectorImg, selectorInput) {
     if (!process.env.TWOCAPTCHA_KEY || process.env.TWOCAPTCHA_KEY === 'TU_CLAVE_DE_2CAPTCHA_AQUI') {
