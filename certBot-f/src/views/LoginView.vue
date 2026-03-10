@@ -144,7 +144,8 @@ const onLogin = async () => {
   try {
     const data = await postData(endpoint, loginForm)
     if (data.ok) {
-      store.token = data.token
+      // Si el backend no envía token (ej. contratista actual), el store guardará undefined
+      store.token = data.token || null
       store.user = data.supervisor || data.contratista
       $q.notify({ type: 'positive', message: '¡Bienvenido(a)!', position: 'top-right' })
       router.push(selectedRole.value === 'supervisor' ? '/supervisor' : '/reports')

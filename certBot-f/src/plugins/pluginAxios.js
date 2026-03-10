@@ -2,7 +2,7 @@ import axios from "axios";
 import { useMainStore } from "../store/store.js";
 
 const axiosInstance = axios.create({
-  baseURL: "http://localhost:3000/api", // Ajusta según tu puerto de backend
+  baseURL: import.meta.env.VITE_API_URL || "http://localhost:3000/api",
 });
 
 // Interceptor para peticiones
@@ -11,7 +11,7 @@ axiosInstance.interceptors.request.use(
     const store = useMainStore();
     const token = store.token;
     if (token) {
-      config.headers["token"] = token;
+      config.headers["x-token"] = token;
     }
     return config;
   },
