@@ -34,52 +34,55 @@
 
                   <div v-if="formData.pagina" class="row q-col-gutter-md">
                     
-                    <!-- FECHA COMÚN -->
-                    <div class="col-12 col-sm-4">
-                      <div class="text-weight-bold q-mb-xs text-sena-blue" style="color: var(--sena-navy) !important;">Día del Pago</div>
-                      <q-input v-model.number="formData.dia" type="number" outlined dense placeholder="1-31" :rules="[v => (v > 0 && v <= 31) || 'Día inválido']" bg-color="white" />
-                    </div>
-                    <div class="col-12 col-sm-4">
-                      <div class="text-weight-bold q-mb-xs text-sena-blue" style="color: var(--sena-navy) !important;">Mes Inicio</div>
-                      <q-select v-model="formData.mes_inicio" outlined dense :options="meses" emit-value map-options :rules="[v => !!v || 'Requerido']" bg-color="white" />
-                    </div>
-                    <div class="col-12 col-sm-4">
-                      <div class="text-weight-bold q-mb-xs text-sena-blue" style="color: var(--sena-navy) !important;">Año</div>
-                      <q-input v-model.number="formData.ano" type="number" outlined dense :rules="[v => !!v || 'Requerido']" bg-color="white" />
+                    <!-- SECCIÓN GENERAL: FECHA DE PAGO -->
+                    <div class="col-12">
+                      <div class="form-section-title text-primary q-mb-sm">Fecha de Pago de la Planilla</div>
+                      <div class="row q-col-gutter-sm">
+                        <div class="col-12 col-sm-4">
+                          <div class="text-weight-bold q-mb-xs text-sena-blue">Día</div>
+                          <q-input v-model.number="formData.dia" type="number" outlined dense placeholder="1-31" :rules="[v => (v > 0 && v <= 31) || 'Día inválido']" bg-color="white" />
+                        </div>
+                        <div class="col-12 col-sm-4">
+                          <div class="text-weight-bold q-mb-xs text-sena-blue">Mes</div>
+                          <q-select v-model="formData.mes_inicio" outlined dense :options="meses" emit-value map-options :rules="[v => !!v || 'Requerido']" bg-color="white" />
+                        </div>
+                        <div class="col-12 col-sm-4">
+                          <div class="text-weight-bold q-mb-xs text-sena-blue">Año</div>
+                          <q-input v-model.number="formData.ano" type="number" outlined dense :rules="[v => !!v || 'Requerido']" bg-color="white" />
+                        </div>
+                      </div>
                     </div>
 
-                    <!-- CAMPOS SEGÚN PLATAFORMA -->
-                    <div class="col-12 col-sm-6">
-                      <div class="text-weight-bold q-mb-xs text-sena-blue" style="color: var(--sena-navy) !important;">Mes Final</div>
-                      <q-select v-model="formData.mes_final" outlined dense :options="meses" emit-value map-options :rules="[v => !!v || 'Requerido']" bg-color="white" />
+                    <!-- CAMPOS ESPECÍFICOS PARA MI PLANILLA -->
+                    <div v-if="formData.pagina === 'Mi Planilla'" class="col-12">
+                      <div class="form-section-title text-primary q-mt-md q-mb-sm">Periodo de Pago Salud</div>
+                      <div class="row q-col-gutter-sm">
+                        <div class="col-6">
+                          <div class="text-weight-bold q-mb-xs text-sena-blue">Mes Salud</div>
+                          <q-select v-model="formData.mes_salud" outlined dense :options="meses" emit-value map-options bg-color="white" />
+                        </div>
+                        <div class="col-6">
+                          <div class="text-weight-bold q-mb-xs text-sena-blue">Año Salud</div>
+                          <q-input v-model.number="formData.ano_salud" type="number" outlined dense bg-color="white" />
+                        </div>
+                      </div>
+
+                      <div class="row q-col-gutter-md q-mt-sm">
+                        <div class="col-12 col-sm-6">
+                          <div class="text-weight-bold q-mb-xs text-sena-blue">Número de Planilla</div>
+                          <q-input v-model="formData.numero_planilla" outlined dense placeholder="Ej: 50885037" :rules="[v => !!v || 'Requerido']" bg-color="white" />
+                        </div>
+                        <div class="col-12 col-sm-6">
+                          <div class="text-weight-bold q-mb-xs text-sena-blue">Valor Total Pagado</div>
+                          <q-input v-model.number="formData.valor_planilla" type="number" outlined dense prefix="$" :rules="[v => !!v || 'Requerido']" bg-color="white" />
+                        </div>
+                      </div>
                     </div>
 
+                    <!-- CAMPOS PARA OTRAS PLATAFORMAS -->
                     <div v-if="formData.pagina === 'Aportes en Línea'" class="col-12 col-sm-6">
-                      <div class="text-weight-bold q-mb-xs text-sena-blue" style="color: var(--sena-navy) !important;">Usted es...</div>
+                      <div class="text-weight-bold q-mb-xs text-sena-blue">Usted es...</div>
                       <q-select v-model="formData.usted_es" outlined dense :options="opUstedEs" emit-value map-options bg-color="white" />
-                    </div>
-
-                    <div v-if="formData.pagina === 'Mi Planilla'" class="col-12 col-sm-6">
-                      <div class="text-weight-bold q-mb-xs text-sena-blue" style="color: var(--sena-navy) !important;">Número de Planilla</div>
-                      <q-input v-model="formData.numero_planilla" outlined dense :rules="[v => !!v || 'Requerido']" bg-color="white" />
-                    </div>
-
-                    <div v-if="formData.pagina === 'Mi Planilla'" class="col-12 col-sm-6">
-                      <div class="text-weight-bold q-mb-xs text-sena-blue" style="color: var(--sena-navy) !important;">Fecha de Pago</div>
-                      <q-input v-model="formData.pago_planilla" type="date" outlined dense :rules="[v => !!v || 'Requerido']" bg-color="white" />
-                    </div>
-
-                    <div v-if="formData.pagina === 'Mi Planilla'" class="col-12 col-sm-6">
-                      <div class="text-weight-bold q-mb-xs text-sena-blue" style="color: var(--sena-navy) !important;">Valor Pagado (COP)</div>
-                      <q-input 
-                        v-model.number="formData.valor_planilla" 
-                        type="number" 
-                        outlined 
-                        dense 
-                        prefix="$"
-                        :rules="[v => !!v || 'Requerido', v => v > 0 || 'Valor inválido']"
-                        bg-color="white"
-                      />
                     </div>
 
                     <div v-if="formData.pagina === 'Asopagos'" class="col-12 col-sm-6">
@@ -154,14 +157,16 @@ const formData = reactive({
   pagina: '', 
   dia: new Date().getDate(), 
   ano: new Date().getFullYear(),
-  mes_inicio: '', 
+  mes_inicio: String(new Date().getMonth() + 1).padStart(2, '0'), 
   mes_final: '', 
   usted_es: 0, 
   numero_planilla: '',
   pago_planilla: '', 
   valor_planilla: null, 
   tipo_certificado: 0, 
-  tipo_reporte: 0
+  tipo_reporte: 0,
+  mes_salud: String(new Date().getMonth() + 1).padStart(2, '0'),
+  ano_salud: new Date().getFullYear()
 })
 
 const meses = Array.from({length: 12}, (_, i) => ({ 
@@ -194,8 +199,10 @@ const submitReporte = async () => {
       mes_final: formData.mes_final || formData.mes_inicio,
       usted_es: Number(formData.usted_es),
       numero_planilla: formData.numero_planilla || 'N/A',
-      pago_planilla: formData.pago_planilla || new Date(),
-      periodo_salud: `${formData.ano}-${formData.mes_inicio}`,
+      pago_planilla: new Date(formData.ano, Number(formData.mes_inicio) - 1, formData.dia),
+      periodo_salud: formData.pagina === 'Mi Planilla' 
+        ? `${formData.ano_salud}-${formData.mes_salud}` 
+        : `${formData.ano}-${formData.mes_inicio}`,
       valor_planilla: Number(formData.valor_planilla) || 0,
       tipo_certificado: Number(formData.tipo_certificado),
       tipo_reporte: Number(formData.tipo_reporte)
