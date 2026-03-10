@@ -201,20 +201,39 @@ const submitReporte = async () => {
       tipo_reporte: Number(formData.tipo_reporte)
     }
 
+    // 1. Crear el reporte en la base de datos
     const res = await postData('/reporte/crear', payload)
     
-    if (res.ok) {
+    if (res.ok && res.reporte?._id) {
       $q.notify({
         type: 'positive',
-        message: '¡Reporte enviado con éxito!',
-        position: 'top-right'
+        message: '¡Reporte guardado! Iniciando automatización...',
+        position: 'top-right',
+        timeout: 2000
       })
-      // Limpiar formulario
+
+      // 2. Disparar el Bot (Automatización)
+      const botRes = await postData('/reporte/automatizar', {
+        reporteId: res.reporte._id,
+        pagina: formData.pagina
+      })
+
+      if (botRes.ok) {
+        $q.notify({
+          color: 'indigo-7',
+          icon: 'smart_toy',
+          message: 'El bot está procesando su solicitud en segundo plano.',
+          position: 'bottom-right',
+          timeout: 5000
+        })
+      }
+
+      // Limpiar formulario tras éxito completo
       formData.pagina = ''
       formData.valor_planilla = null
     }
   } catch (error) {
-    console.error('Error al enviar reporte:', error)
+    console.error('Error en el proceso de reporte:', error)
     $q.notify({
       type: 'negative',
       message: error.response?.data?.msg || 'Error al conectar con el servidor',

@@ -63,7 +63,16 @@
 
                   <div class="col-12 col-md-6">
                     <div class="input-label">Tipo de Afiliado</div>
-                    <q-select v-model="formData.tipo_afiliado" outlined :options="opcionesAfiliado" emit-value map-options dense lazy-rules :rules="[val => !!val || 'Requerido']">
+                    <q-select 
+                      v-model="formData.tipo_afiliado" 
+                      outlined 
+                      :options="opcionesAfiliado" 
+                      emit-value 
+                      map-options 
+                      dense 
+                      lazy-rules 
+                      :rules="[val => val !== null && val !== '' || 'Requerido']"
+                    >
                       <template v-slot:prepend><q-icon name="group" color="grey-7" /></template>
                     </q-select>
                   </div>
@@ -74,8 +83,26 @@
 
                   <div class="col-12">
                     <div class="input-label">Correo Electrónico</div>
-                    <q-input v-model="formData.correo" outlined placeholder="correo@ejemplo.com" dense lazy-rules :rules="[val => /.+@.+\..+/.test(val) || 'Email inválido']">
+                    <q-input 
+                      v-model="formData.correo" 
+                      outlined 
+                      placeholder="correo@ejemplo.com" 
+                      dense 
+                      lazy-rules 
+                      :rules="[val => /.+@.+\..+/.test(val) || 'Email inválido']"
+                    >
                       <template v-slot:prepend><q-icon name="email" color="grey-7" /></template>
+                      <template v-slot:append>
+                        <q-btn-dropdown flat dense round dropdown-icon="alternate_email" color="grey-7">
+                          <q-list>
+                            <q-item v-for="domain in ['@gmail.com', '@outlook.com', '@sena.edu.co', '@hotmail.com']" :key="domain" clickable v-close-popup @click="completarCorreo(domain)">
+                              <q-item-section>
+                                <q-item-label>{{ domain }}</q-item-label>
+                              </q-item-section>
+                            </q-item>
+                          </q-list>
+                        </q-btn-dropdown>
+                      </template>
                     </q-input>
                   </div>
 
@@ -134,12 +161,22 @@ const formData = reactive({ tipo_documento: '', numero_documento: '', fecha_expe
 
 const opcionesDocumento = [{ label: 'Cédula de Ciudadanía', value: 'CC' }, { label: 'Cédula de Extranjería', value: 'CE' }, { label: 'Pasaporte', value: 'PA' }]
 const opcionesEPS = [{ label: 'Sura', value: 'Sura' }, { label: 'Sanitas', value: 'Sanitas' }, { label: 'Compensar', value: 'Compensar' }, { label: 'Nueva EPS', value: 'Nueva EPS' }, { label: 'Salud Total', value: 'Salud Total' }, { label: 'Famisanar', value: 'Famisanar' }]
-const opcionesAfiliado = [{ label: 'Cotizante', value: 'Cotizante' }, { label: 'Pensionado', value: 'Pensionado' }]
+const opcionesAfiliado = [{ label: 'Cotizante', value: 0 }, { label: 'Pensionado', value: 1 }]
+
+const completarCorreo = (domain) => {
+  const parts = formData.correo.split('@')
+  formData.correo = parts[0] + domain
+}
 
 const onSubmit = async () => {
   loading.value = true
   try {
-    const res = await postData('/auth/registro', formData)
+    const payload = {
+      ...formData,
+      numero_documento: String(formData.numero_documento),
+      tipo_afiliado: Number(formData.tipo_afiliado)
+    }
+    const res = await postData('/auth/registro', payload)
     if (res.ok) {
       $q.notify({ type: 'positive', message: '¡Registro exitoso!', position: 'top-right' })
       router.push('/login')

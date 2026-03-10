@@ -11,7 +11,7 @@ axiosInstance.interceptors.request.use(
     const store = useMainStore();
     const token = store.token;
     if (token) {
-      config.headers["x-token"] = token;
+      config.headers["token"] = token;
     }
     return config;
   },
