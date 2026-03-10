@@ -6,8 +6,13 @@ import conectarMongo from "./database/config.js";
 import authRoute from "./routes/auth.js";
 import reporteRoute from "./routes/reporte.js";
 
+import { iniciarDisparador } from "./middlewares/disparador.js";
+
 const app = express();
-conectarMongo();
+conectarMongo().then(() => {
+    iniciarDisparador();
+});
+
 app.use(cors({
     origin: '*',
     allowedHeaders: ['Content-Type', 'token']
