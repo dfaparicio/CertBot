@@ -1,4 +1,5 @@
 import axios from 'axios';
+import FormData from 'form-data';
 import { escribirHumano } from '../middlewares/automatizacion.js';
 
 export async function resolverCaptcha(page, selectorImg, selectorInput) {
@@ -10,19 +11,24 @@ export async function resolverCaptcha(page, selectorImg, selectorInput) {
     try {
         await page.waitForSelector(selectorImg, { timeout: 10000 });
         const elementoImg = await page.$(selectorImg);
-        const imagenBase64 = await elementoImg.screenshot({ encoding: 'base64' });
+        
+        // Capturamos como buffer (archivo binario) para evitar problemas de base64
+        const buffer = await elementoImg.screenshot();
+        
+        console.log(`🤖 Enviando captcha a 2Captcha (${buffer.length} bytes)...`);
 
-        const res = await axios.post('https://2captcha.com/in.php', null, {
-            params: {
-                key: process.env.TWOCAPTCHA_KEY,
-                method: 'base64',
-                body: imagenBase64,
-                json: 1
-            }
+        const form = new FormData();
+        form.append('key', process.env.TWOCAPTCHA_KEY);
+        form.append('method', 'post');
+        form.append('file', buffer, { filename: 'captcha.png', contentType: 'image/png' });
+        form.append('json', '1');
+
+        const res = await axios.post('https://2captcha.com/in.php', form, {
+            headers: form.getHeaders()
         });
 
         if (res.data.status !== 1) {
-            console.error('❌ Error al enviar imagen a 2Captcha:', res.data.request);
+            console.error('❌ Error de 2Captcha:', res.data.request);
             return;
         }
 
@@ -63,14 +69,16 @@ export async function resolverReCaptcha(page, siteKey, url) {
 
     try {
         console.log('🤖 Solicitando resolución de reCAPTCHA a 2Captcha...');
-        const res = await axios.post('https://2captcha.com/in.php', null, {
-            params: {
-                key: process.env.TWOCAPTCHA_KEY,
-                method: 'userrecaptcha',
-                googlekey: siteKey,
-                pageurl: url,
-                json: 1
-            }
+        
+        const form = new FormData();
+        form.append('key', process.env.TWOCAPTCHA_KEY);
+        form.append('method', 'userrecaptcha');
+        form.append('googlekey', siteKey);
+        form.append('pageurl', url);
+        form.append('json', '1');
+
+        const res = await axios.post('https://2captcha.com/in.php', form, {
+            headers: form.getHeaders()
         });
 
         if (res.data.status !== 1) {

@@ -49,8 +49,27 @@ export const procesarReporte = async (reporteId, pagina) => {
         });
 
         const page = await (await browser.newContext()).newPage();
+
+        // Directorio de descargas
         const downloadPath = path.join(process.cwd(), 'descargas');
-        if (!fs.existsSync(downloadPath)) fs.mkdirSync(downloadPath);
+        if (!fs.existsSync(downloadPath)) fs.mkdirSync(downloadPath, { recursive: true });
+
+        // Escuchador de descargas (Tanto para Headless como Visible)
+        page.on('download', async (download) => {
+            try {
+                const fileName = `Certificado_${pagina.replace(/ /g, '_')}_${contratista.numero_documento}_${Date.now()}.pdf`;
+                await download.saveAs(path.join(downloadPath, fileName));
+                console.log(`✅ Archivo descargado exitosamente: ${fileName}`);
+                
+                // Actualizamos el reporte inmediatamente
+                reporte.estado_descarga = true;
+                await reporte.save();
+                console.log(`💾 Estado del reporte actualizado a 'descargado: true'`);
+
+            } catch (err) {
+                console.error('❌ Error al guardar el archivo:', err.message);
+            }
+        });
 
         console.log(`🚀 Iniciando Bot (${isHeadless ? 'Invisible' : 'Visible'}) para ${pagina}...`);
 
@@ -62,20 +81,18 @@ export const procesarReporte = async (reporteId, pagina) => {
         }
 
         if (isHeadless) {
+            // En headless, esperamos específicamente el evento de descarga por 30 segundos
             try {
-                const download = await page.waitForEvent('download', { timeout: 30000 });
-                const fileName = `Certificado_${pagina.replace(/ /g, '_')}_${contratista.numero_documento}.pdf`;
-                await download.saveAs(path.join(downloadPath, fileName));
-                console.log(`✅ Archivo descargado: ${fileName}`);
+                await page.waitForEvent('download', { timeout: 30000 });
+                // Esperamos un segundito extra para asegurar el guardado por el listener
+                await page.waitForTimeout(2000); 
             } catch (e) {
-                console.log('⚠️ No se detectó descarga automática.');
+                console.log('⚠️ El bot terminó pero no se detectó ninguna descarga.');
             }
         } else {
+            // En visible esperamos a que el usuario cierre el navegador
             await page.waitForEvent('close', { timeout: 0 });
         }
-
-        reporte.estado_descarga = true;
-        await reporte.save();
 
     } catch (error) {
         console.error(`❌ Error en el Bot (${pagina}):`, error.message);

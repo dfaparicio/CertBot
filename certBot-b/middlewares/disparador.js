@@ -48,10 +48,12 @@ const revisarReportesPendientes = async () => {
                     // Marcamos como en proceso
                     reportesEnProceso.add(idStr);
 
-                    // Ejecutamos y cuando termine (bien o mal), liberamos el ID
-                    procesarReporte(reporte._id, nombrePagina).finally(() => {
+                    // Ejecutamos y esperamos (await) para procesarlos uno por uno
+                    try {
+                        await procesarReporte(reporte._id, nombrePagina);
+                    } finally {
                         reportesEnProceso.delete(idStr);
-                    });
+                    }
                 }
             }
         }
