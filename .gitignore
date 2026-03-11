@@ -15,3 +15,7 @@ yarn-error.log*
 # IDEs
 .vscode/
 .idea/
+
+# Credenciales de Google
+google-credentials.json
+certBot-b/google-credentials.json
