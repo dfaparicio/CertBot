@@ -34,6 +34,11 @@ const ContratistaSchema = Schema({
     password: {
         type: String,
         required: [true, 'La contraseña para loguearse es obligatoria']
+    },
+    supervisorId: {
+        type: Schema.Types.ObjectId,
+        ref: 'Supervisor',
+        required: [true, 'El ID del supervisor es obligatorio']
     }
 }, { _id: true, timestamps: true });
 

@@ -1,4 +1,5 @@
 import Contratista from '../models/Contratista.js';
+import Supervisor from '../models/Supervisor.js';
 import bcrypt from 'bcryptjs';
 
 export const registroContratista = async (req, res, next) => {
@@ -20,6 +21,17 @@ export const registroContratista = async (req, res, next) => {
             });
         }
 
+        // --- ASIGNACIÓN AUTOMÁTICA DE SUPERVISOR ---
+        // Buscamos el primer supervisor activo disponible en la base de datos
+        const supervisor = await Supervisor.findOne({ estado: true });
+
+        if (!supervisor) {
+            return res.status(400).json({
+                ok: false,
+                msg: 'No hay supervisores disponibles en el sistema. Contacte al administrador.'
+            });
+        }
+
         // Encriptar contraseña
         const salt = bcrypt.genSaltSync(10);
         const passwordEncriptado = bcrypt.hashSync(password, salt);
@@ -31,7 +43,8 @@ export const registroContratista = async (req, res, next) => {
             eps,
             tipo_afiliado,
             correo,
-            password: passwordEncriptado
+            password: passwordEncriptado,
+            supervisorId: supervisor._id // Asignación automática
         });
 
         await nuevoContratista.save();
