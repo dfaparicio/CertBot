@@ -29,6 +29,11 @@ const reporteSchema = new Schema({
         ref: 'Contratista',
         required: [true, 'El ID del contratista es obligatorio']
     },
+    supervisorId: {
+        type: Schema.Types.ObjectId,
+        ref: 'Supervisor',
+        required: [true, 'El ID del supervisor es obligatorio']
+    },
     ano: {
         type: Number,
         required: [true, 'El año es obligatorio']
@@ -88,6 +93,14 @@ const reporteSchema = new Schema({
     pagina_bot: {
         type: String,
         default: null
+    },
+    estado: {
+        type: String,
+        default: 'Pendiente',
+        enum: {
+            values: ['Pendiente', 'Procesado', 'Aprobado', 'Rechazado'],
+            message: '{VALUE} no es un estado válido'
+        }
     },
     estado_descarga: {
         type: Boolean,

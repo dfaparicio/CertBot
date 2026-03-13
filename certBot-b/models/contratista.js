@@ -1,6 +1,16 @@
 import { Schema, model } from 'mongoose';
 
 const ContratistaSchema = Schema({
+    nombre: {
+        type: String,
+        required: [true, 'El nombre es obligatorio'],
+        default: 'Nuevo'
+    },
+    apellidos: {
+        type: String,
+        required: [true, 'Los apellidos son obligatorios'],
+        default: 'Contratista'
+    },
     tipo_documento: {
         type: String,
         required: [true, 'El tipo de documento es obligatorio']
@@ -39,6 +49,10 @@ const ContratistaSchema = Schema({
         type: Schema.Types.ObjectId,
         ref: 'Supervisor',
         required: [true, 'El ID del supervisor es obligatorio']
+    },
+    estado: {
+        type: Boolean,
+        default: true
     }
 }, { _id: true, timestamps: true });
 

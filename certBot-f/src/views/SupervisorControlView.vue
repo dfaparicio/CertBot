@@ -1,162 +1,108 @@
 <template>
-  <q-layout view="lHr lpR fFf" class="app-page bg-grey-1">
+  <q-layout view="hHh lpR fFf" class="app-page bg-grey-2">
     
-    <!-- Sidebar Administrativa -->
-    <q-drawer show-if-above v-model="store.isDrawerOpen" side="left" class="sidebar-container" :width="280" elevated>
-      <div class="sidebar-content column full-height">
-        <div class="sidebar-brand" style="display: flex; flex-direction: column; justify-content: center;">
-          <h1 class="text-h5 text-weight-bolder text-sena-blue" style="margin:0 !important; padding:0 !important; line-height: 0.85 !important; display: inline-block;">Cert<span style="color: var(--sena-green);">Bot</span></h1>
-          <span class="text-caption text-sena-primary text-weight-bold" style="margin-top: 2px !important; line-height: 1;">Sistema de Gestión y Revisión de Pagos</span>
+    <!-- Header Profesional SENA -->
+    <q-header elevated class="bg-white text-sena-navy q-py-xs">
+      <q-toolbar class="container-xl">
+        <div class="header-brand">
+          <h1 class="text-h5 text-weight-bolder" style="margin:0; line-height: 1;">Cert<span style="color: var(--sena-green);">Bot</span></h1>
+          <span class="text-caption text-weight-bold text-grey-7">Gestión de Supervisión</span>
         </div>
+        
+        <q-space />
 
-        <q-list padding class="q-px-md flex-1 q-mt-md">
-          <q-item clickable v-ripple active class="nav-item" active-class="bg-green-1 text-sena-green">
-            <q-item-section avatar><q-icon name="dashboard" /></q-item-section>
-            <q-item-section class="text-weight-bold">Panel de Control</q-item-section>
-          </q-item>
-          
-          <q-item clickable v-ripple class="nav-item text-grey-7">
-            <q-item-section avatar><q-icon name="group" /></q-item-section>
-            <q-item-section>Contratistas</q-item-section>
-          </q-item>
-
-          <q-item clickable v-ripple class="nav-item text-grey-7">
-            <q-item-section avatar><q-icon name="history" /></q-item-section>
-            <q-item-section>Historial de Auditoría</q-item-section>
-          </q-item>
-
-          <q-separator class="q-my-lg" />
-
-          <q-item clickable v-ripple class="nav-item text-red-8" @click="handleLogout">
-            <q-item-section avatar><q-icon name="logout" /></q-item-section>
-            <q-item-section class="text-weight-bold">Cerrar Sesión</q-item-section>
-          </q-item>
-        </q-list>
-
-        <div class="sidebar-user q-pa-lg bg-grey-2">
-          <div class="flex items-center gap-md">
-            <q-avatar size="44px" color="sena-navy" text-color="white">{{ supervisorIniciales }}</q-avatar>
-            <div class="column">
-              <span class="text-weight-bold text-sena-navy truncate" style="max-width: 140px">{{ supervisorNombre }}</span>
-              <span class="text-caption text-grey-7">Supervisor Activo</span>
-            </div>
+        <div class="row items-center gap-md">
+          <div class="column items-end gt-xs">
+            <span class="text-weight-bold">{{ supervisorNombre }}</span>
+            <span class="text-caption text-sena-green text-weight-bold">SUPERVISOR ACTIVO</span>
           </div>
+          <q-avatar size="40px" color="primary" text-color="white" class="q-ml-sm shadow-2">
+            {{ supervisorIniciales }}
+          </q-avatar>
+          <q-btn flat round dense icon="logout" color="red-8" @click="handleLogout" class="q-ml-md">
+            <q-tooltip>Cerrar Sesión</q-tooltip>
+          </q-btn>
         </div>
-      </div>
-    </q-drawer>
+      </q-toolbar>
+    </q-header>
 
     <q-page-container>
-      <q-page class="q-pa-xl">
+      <q-page class="q-pa-lg container-xl">
         
-        <!-- Header del Dashboard -->
-        <div class="row q-mb-xl items-end justify-between">
-          <div class="col-12 col-md-auto">
-            <div class="text-overline text-sena-green text-weight-bold">VISIÓN GENERAL ADMINISTRATIVA</div>
-            <h1 class="text-h3 text-weight-bolder text-sena-navy q-ma-none">Dashboard de Gestión</h1>
+        <!-- Título y Acción Principal -->
+        <div class="row q-mb-lg items-center justify-between">
+          <div>
+            <h1 class="text-h4 text-weight-bolder text-sena-navy q-ma-none">Panel de Control General</h1>
+            <p class="text-subtitle2 text-grey-7">Visualización completa de contratistas y reportes de seguridad social.</p>
           </div>
-          <div class="col-12 col-md-auto q-mt-md">
-            <q-btn 
-              color="primary" 
-              icon="refresh" 
-              label="Sincronizar Datos" 
-              no-caps 
-              unelevated 
-              :loading="loading" 
-              @click="obtenerReportes"
-              class="btn-primary-sena q-px-lg"
-            />
-          </div>
+          <q-btn 
+            color="primary" 
+            icon="sync" 
+            label="Sincronizar Datos" 
+            no-caps 
+            unelevated 
+            :loading="loading" 
+            @click="cargarDatos" 
+            class="btn-primary-sena q-px-lg shadow-2" 
+          />
         </div>
 
-        <!-- KPI Stats Grid -->
-        <div class="row q-col-gutter-lg q-mb-xl">
-          <div v-for="stat in kpiStats" :key="stat.label" class="col-12 col-sm-6 col-md-3">
-            <q-card class="stat-card no-shadow">
-              <q-card-section class="row items-center no-wrap q-pa-lg">
+        <!-- KPI Stats Cards (Arriba) -->
+        <div class="row q-col-gutter-md q-mb-xl">
+          <div v-for="stat in statsReportes" :key="stat.label" class="col-12 col-sm-6 col-md-3">
+            <q-card class="stat-card no-shadow border-grey">
+              <q-card-section class="row items-center no-wrap q-pa-md">
                 <div class="col">
                   <div class="text-caption text-grey-7 text-weight-bold text-uppercase">{{ stat.label }}</div>
                   <div class="text-h4 text-weight-bolder text-sena-navy">{{ stat.value }}</div>
                 </div>
                 <div :class="['stat-icon-box', `bg-${stat.color}-1`]">
-                  <q-icon :name="stat.icon" :color="stat.color" size="24px" />
+                  <q-icon :name="stat.icon" :color="stat.color" size="28px" />
                 </div>
               </q-card-section>
             </q-card>
           </div>
         </div>
 
-        <!-- Tabla Principal de Reportes -->
-        <div class="q-mb-md flex items-center justify-between">
-          <div class="text-h5 text-weight-bolder text-sena-navy">Reportes de Seguridad Social</div>
-          <q-input dense v-model="searchText" placeholder="Buscar por documento o correo..." outlined class="bg-white" style="width: 350px; border-radius: 12px;">
-            <template v-slot:prepend><q-icon name="search" color="grey-6" /></template>
-          </q-input>
+        <!-- SECCIÓN 1: MIS CONTRATISTAS (Principal) -->
+        <div class="q-mb-xl">
+          <div class="flex items-center q-mb-md">
+            <q-icon name="group" size="24px" color="primary" class="q-mr-sm" />
+            <div class="text-h6 text-weight-bold text-sena-navy">Personal a Cargo ({{ contratistas.length }})</div>
+          </div>
+          <q-card flat bordered class="no-shadow border-grey">
+            <q-table
+              flat
+              :rows="contratistas"
+              :columns="colContratistas"
+              row-key="_id"
+              :pagination="{ rowsPerPage: 10 }"
+              class="compact-table"
+            >
+              <template v-slot:body-cell-nombre_completo="props">
+                <q-td :props="props" class="text-weight-bold text-sena-navy">
+                  {{ props.row.nombre }} {{ props.row.apellidos }}
+                </q-td>
+              </template>
+              <template v-slot:body-cell-estado="props">
+                <q-td :props="props">
+                  <q-badge :color="props.row.estado ? 'green-7' : 'red-7'" class="q-px-sm">
+                    {{ props.row.estado ? 'ACTIVO' : 'INACTIVO' }}
+                  </q-badge>
+                </q-td>
+              </template>
+            </q-table>
+          </q-card>
         </div>
-
-        <q-table
-          flat
-          :rows="reportesFiltrados"
-          :columns="columns"
-          row-key="_id"
-          :loading="loading"
-          class="dashboard-table"
-          no-data-label="No se encontraron reportes para mostrar"
-        >
-          <!-- Slot Contratista: Info Agrupada -->
-          <template v-slot:body-cell-contratista="props">
-            <q-td :props="props">
-              <div class="column">
-                <span class="text-weight-bold text-sena-navy">{{ props.row.contratistaId?.correo }}</span>
-                <div class="row items-center gap-xs">
-                  <q-chip dense size="xs" color="grey-2" text-color="grey-9" class="q-ma-none">DOC: {{ props.row.contratistaId?.numero_documento }}</q-chip>
-                  <q-chip dense size="xs" color="blue-1" text-color="blue-9" class="q-ma-none">EPS: {{ props.row.contratistaId?.eps || 'Sura' }}</q-chip>
-                </div>
-              </div>
-            </q-td>
-          </template>
-
-          <!-- Slot Valor -->
-          <template v-slot:body-cell-valor="props">
-            <q-td :props="props" class="text-weight-bolder text-sena-navy">
-              {{ formatCurrency(props.row.valor_planilla || 0) }}
-            </q-td>
-          </template>
-
-          <!-- Slot Estado -->
-          <template v-slot:body-cell-estado="props">
-            <q-td :props="props">
-              <q-chip 
-                :class="['status-chip', props.row.estado_descarga ? 'bg-soft-green' : 'bg-soft-orange']"
-                unelevated
-                size="sm"
-              >
-                {{ props.row.estado_descarga ? 'PROCESADO' : 'PENDIENTE' }}
-              </q-chip>
-            </q-td>
-          </template>
-
-          <!-- Slot Acciones -->
-          <template v-slot:body-cell-acciones="props">
-            <q-td :props="props" class="q-gutter-x-sm">
-              <q-btn 
-                flat round dense 
-                color="sena-green" 
-                icon="check_circle" 
-                @click="cambiarEstadoDescarga(props.row)"
-                v-if="!props.row.estado_descarga"
-              >
-                <q-tooltip>Marcar como revisado</q-tooltip>
-              </q-btn>
-              <q-btn flat round dense color="blue-7" icon="visibility">
-                <q-tooltip>Ver planilla completa</q-tooltip>
-              </q-btn>
-              <q-btn flat round dense color="grey-5" icon="more_vert" />
-            </q-td>
-          </template>
-        </q-table>
 
       </q-page>
     </q-page-container>
+
+    <!-- Footer Institucional -->
+    <q-footer class="bg-white text-grey-7 border-top q-pa-sm text-center">
+      <div class="text-caption text-weight-bold">© 2026 CertBot SENA - Sistema de Gestión de Pagos Automatizado</div>
+    </q-footer>
+
   </q-layout>
 </template>
 
@@ -170,81 +116,98 @@ import { useMainStore } from '../store/store'
 const $q = useQuasar()
 const router = useRouter()
 const store = useMainStore()
+
 const loading = ref(false)
-const searchText = ref('')
-
-// --- MOCK DATA PARA DISEÑO (Basado en el backend real) ---
-const MOCK_REPORTES = [
-  { _id: '1', pagina: 'SOI', ano: 2024, valor_planilla: 540000, estado_descarga: true, contratistaId: { correo: 'juan.perez@sena.edu.co', numero_documento: '1020304050', eps: 'Sura' } },
-  { _id: '2', pagina: 'Mi Planilla', ano: 2024, valor_planilla: 420000, estado_descarga: false, contratistaId: { correo: 'maria.garcia@sena.edu.co', numero_documento: '1080907060', eps: 'Sanitas' } },
-  { _id: '3', pagina: 'Aportes en Línea', ano: 2024, valor_planilla: 890000, estado_descarga: true, contratistaId: { correo: 'carlos.ruiz@sena.edu.co', numero_documento: '1050403020', eps: 'Compensar' } },
-  { _id: '4', pagina: 'Asopagos', ano: 2024, valor_planilla: 310000, estado_descarga: false, contratistaId: { correo: 'ana.beltran@sena.edu.co', numero_documento: '1030201040', eps: 'Nueva EPS' } }
-]
-
-const reportesRaw = ref(MOCK_REPORTES)
+const searchReporte = ref('')
+const reportes = ref([])
+const contratistas = ref([])
 
 // --- Computeds ---
-const supervisorNombre = computed(() => store.user?.nombre || 'Administrador SENA')
-const supervisorIniciales = computed(() => supervisorNombre.value.substring(0,2).toUpperCase())
+const supervisorNombre = computed(() => `${store.user?.nombre || ''} ${store.user?.apellidos || ''}`.trim())
+const supervisorIniciales = computed(() => supervisorNombre.value.split(' ').map(n => n[0]).join('').toUpperCase())
 
-const kpiStats = computed(() => [
-  { label: 'Total Reportes', value: reportesRaw.value.length, icon: 'analytics', color: 'indigo' },
-  { label: 'Por Revisar', value: reportesRaw.value.filter(r => !r.estado_descarga).length, icon: 'pending_actions', color: 'orange' },
-  { label: 'Procesados', value: reportesRaw.value.filter(r => r.estado_descarga).length, icon: 'task_alt', color: 'green' },
-  { label: 'Monto Total', value: formatCurrency(reportesRaw.value.reduce((acc, r) => acc + (r.valor_planilla || 0), 0)), icon: 'payments', color: 'teal' }
+const statsReportes = computed(() => [
+  { label: 'Total Reportes', value: reportes.value.length, icon: 'summarize', color: 'primary' },
+  { label: 'Pendientes', value: reportes.value.filter(r => (r.estado || 'Pendiente') === 'Pendiente').length, icon: 'pending', color: 'orange' },
+  { label: 'Aprobados', value: reportes.value.filter(r => r.estado === 'Aprobado').length, icon: 'verified_user', color: 'green' },
+  { label: 'Rechazados', value: reportes.value.filter(r => r.estado === 'Rechazado').length, icon: 'block', color: 'red' }
 ])
 
-const columns = [
+// --- Columnas ---
+const colReportes = [
   { name: 'contratista', label: 'Contratista / Identidad', align: 'left' },
   { name: 'pagina', label: 'Plataforma', align: 'left', field: 'pagina' },
-  { name: 'ano', label: 'Periodo', align: 'left', field: 'ano' },
-  { name: 'valor', label: 'Valor Reportado', align: 'left' },
-  { name: 'estado', label: 'Estado', align: 'left' },
-  { name: 'acciones', label: 'Acciones', align: 'center' }
+  { name: 'periodo', label: 'Periodo (M/A)', align: 'left', field: row => `${row.mes_inicio}/${row.ano}` },
+  { name: 'valor', label: 'Monto Pagado', align: 'left', field: row => formatCurrency(row.valor_planilla) },
+  { name: 'estado', label: 'Estado Actual', align: 'left' },
+  { name: 'acciones', label: 'Acciones de Gestión', align: 'center' }
+]
+
+const colContratistas = [
+  { name: 'nombre_completo', label: 'Nombre Completo', align: 'left' },
+  { name: 'numero_documento', label: 'N° Documento', align: 'left', field: 'numero_documento' },
+  { name: 'correo', label: 'Correo SENA', align: 'left', field: 'correo' },
+  { name: 'eps', label: 'EPS Afiliada', align: 'left', field: 'eps' },
+  { name: 'estado', label: 'Estado', align: 'left' }
 ]
 
 // --- Métodos ---
 const formatCurrency = (val) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(val)
 
+const getEstadoColor = (estado) => {
+  switch (estado) {
+    case 'Aprobado': return 'green-7'
+    case 'Rechazado': return 'red-7'
+    case 'Procesado': return 'blue-7'
+    default: return 'orange-8'
+  }
+}
+
 const reportesFiltrados = computed(() => {
-  if (!searchText.value) return reportesRaw.value
-  const term = searchText.value.toLowerCase()
-  return reportesRaw.value.filter(r => 
-    r.contratistaId?.correo?.toLowerCase().includes(term) || 
+  if (!searchReporte.value) return reportes.value
+  const term = searchReporte.value.toLowerCase()
+  return reportes.value.filter(r => 
+    r.contratistaId?.nombre?.toLowerCase().includes(term) || 
+    r.contratistaId?.apellidos?.toLowerCase().includes(term) ||
     r.contratistaId?.numero_documento?.includes(term) ||
     r.pagina.toLowerCase().includes(term)
   )
 })
 
-const obtenerReportes = async () => {
+const cargarDatos = async () => {
+  if (!store.user?._id) return
   loading.value = true
+  
+  // Limpiar para evitar datos residuales
+  reportes.value = []
+  contratistas.value = []
+
   try {
-    // PETICIÓN LISTA: Cuando crees el endpoint GET /reporte/todos
-    const res = await getData('/reporte/todos')
-    if (res.ok && res.reportes?.length > 0) {
-      reportesRaw.value = res.reportes
+    const res = await getData(`/reporte/supervisor/${store.user._id}?t=${Date.now()}`)
+    console.log('Datos recibidos del servidor:', res)
+    if (res.ok) {
+      reportes.value = res.reportes || []
+      contratistas.value = res.contratistas || []
     }
   } catch (error) {
-    console.warn('Backend offline o sin ruta GET /reporte/todos. Usando Mock Data.')
+    $q.notify({ type: 'negative', message: 'Error al conectar con el servidor', position: 'top-right' })
   } finally {
     loading.value = false
   }
 }
 
-const cambiarEstadoDescarga = async (reporte) => {
+const actualizarEstadoReporte = async (reporte, nuevoEstado) => {
   try {
-    // PETICIÓN LISTA: Usa el endpoint PUT /actualizar/:id del backend
     const res = await putData(`/reporte/actualizar/${reporte._id}`, { 
       pagina: reporte.pagina, 
-      estado_descarga: true 
+      estado: nuevoEstado 
     })
-    
     if (res.ok) {
-      $q.notify({ type: 'positive', message: 'Reporte procesado correctamente', position: 'bottom-right' })
-      obtenerReportes() 
+      $q.notify({ type: 'positive', message: `Reporte ${nuevoEstado} con éxito`, position: 'top-right' })
+      cargarDatos()
     }
   } catch (error) {
-    $q.notify({ type: 'negative', message: 'Error al actualizar el estado' })
+    $q.notify({ type: 'negative', message: 'No se pudo actualizar el estado', position: 'top-right' })
   }
 }
 
@@ -254,11 +217,49 @@ const handleLogout = () => {
 }
 
 onMounted(() => {
-  // En producción, aquí validarías el token
-  obtenerReportes()
+  cargarDatos()
 })
 </script>
 
 <style scoped>
-@import "../styles/supervisor.css";
+.container-xl {
+  max-width: 1440px;
+  margin: 0 auto;
+}
+.header-brand {
+  cursor: default;
+}
+.stat-card {
+  border-radius: 12px;
+  transition: all 0.3s cubic-bezier(.25,.8,.25,1);
+}
+.stat-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
+}
+.stat-icon-box {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.border-grey {
+  border: 1px solid #e0e0e0;
+}
+.border-top {
+  border-top: 1px solid #e0e0e0;
+}
+.compact-table :deep(thead tr th) {
+  background-color: #f8f9fa;
+  font-weight: 700;
+  color: var(--sena-navy);
+}
+.dashboard-table :deep(thead tr th) {
+  background-color: #f1f3f5;
+  font-weight: 800;
+  color: var(--sena-navy);
+  font-size: 0.85rem;
+}
 </style>

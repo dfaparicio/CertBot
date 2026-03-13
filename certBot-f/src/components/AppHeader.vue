@@ -10,11 +10,15 @@
       
       <div class="header-actions">
         <slot name="actions">
-          <div class="header-user" v-if="userName">
-            <span class="user-name">{{ userName }}</span>
+          <div class="header-user" v-if="store.user">
+            <span class="user-name">{{ userNameDisplay }}</span>
             <q-avatar size="36px" class="bg-sena-green text-white">
-              {{ userName.charAt(0).toUpperCase() }}
+              {{ userNameDisplay.charAt(0).toUpperCase() }}
             </q-avatar>
+            
+            <q-btn flat round dense icon="logout" color="grey-7" class="q-ml-sm" @click="handleLogout">
+              <q-tooltip>Cerrar Sesión</q-tooltip>
+            </q-btn>
           </div>
         </slot>
       </div>
@@ -23,12 +27,29 @@
 </template>
 
 <script setup>
-defineProps({
-  userName: {
-    type: String,
-    default: ''
-  }
+import { computed } from 'vue'
+import { useRouter } from 'vue-router'
+import { useMainStore } from '../store/store'
+import { useQuasar } from 'quasar'
+
+const store = useMainStore()
+const router = useRouter()
+const $q = useQuasar()
+
+const userNameDisplay = computed(() => {
+  if (!store.user) return ''
+  return store.user.nombre || store.user.correo || 'Usuario'
 })
+
+const handleLogout = () => {
+  store.logout()
+  router.push('/login')
+  $q.notify({
+    type: 'info',
+    message: 'Sesión cerrada',
+    position: 'top-right'
+  })
+}
 </script>
 
 <style scoped>

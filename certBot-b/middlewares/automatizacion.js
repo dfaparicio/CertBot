@@ -154,10 +154,12 @@ const procesarReporte = async (reporteId, pagina, taskKey) => {
         context.on('download', async (download) => {
             try {
                 const docNum = contratista.numero_documento;
-                const nombreLimpio = (contratista.nombre || contratista.nombre_completo || `Contratista_${docNum}`).trim().replace(/\s+/g, '_');
+                const nombre = (contratista.nombre || 'Sin').trim().replace(/\s+/g, '_');
+                const apellido = (contratista.apellidos || 'Nombre').trim().replace(/\s+/g, '_');
+                
                 const suggestedFileName = download.suggestedFilename();
                 const extension = suggestedFileName.split('.').pop() || 'pdf';
-                const fileName = `${nombreLimpio}_${docNum}.${extension}`;
+                const fileName = `${nombre}_${apellido}_${docNum}.${extension}`;
                 const fullPath = path.join(downloadPath, fileName);
 
                 await download.saveAs(fullPath);
@@ -182,8 +184,10 @@ const procesarReporte = async (reporteId, pagina, taskKey) => {
 
                 if (response) {
                     const docNum = contratista.numero_documento;
-                    const nombreLimpio = (contratista.nombre || contratista.nombre_completo || `Contratista_${docNum}`).trim().replace(/\s+/g, '_');
-                    const fileName = `${nombreLimpio}_${docNum}_V.pdf`;
+                    const nombre = (contratista.nombre || 'Sin').trim().replace(/\s+/g, '_');
+                    const apellido = (contratista.apellidos || 'Nombre').trim().replace(/\s+/g, '_');
+                    
+                    const fileName = `${nombre}_${apellido}_${docNum}_V.pdf`;
                     const fullPath = path.join(downloadPath, fileName);
                     
                     const buffer = await response.body();

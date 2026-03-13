@@ -89,9 +89,22 @@ export const loginContratista = async (req, res, next) => {
                 _id: contratista._id,
                 numero_documento: contratista.numero_documento,
                 correo: contratista.correo,
-                eps: contratista.eps
+                eps: contratista.eps,
+                supervisorId: contratista.supervisorId
             },/* 
             token */
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const listarSupervisores = async (req, res, next) => {
+    try {
+        const supervisores = await Supervisor.find({ estado: true }, 'nombre apellidos _id');
+        res.json({
+            ok: true,
+            supervisores
         });
     } catch (error) {
         next(error);

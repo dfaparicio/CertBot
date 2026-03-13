@@ -26,6 +26,24 @@
                 <q-form @submit="onSubmit" class="row q-col-gutter-lg">
                   
                   <div class="col-12">
+                    <div class="form-section-title">Información Personal</div>
+                  </div>
+
+                  <div class="col-12 col-md-6">
+                    <div class="input-label">Nombre(s)</div>
+                    <q-input v-model="formData.nombre" outlined placeholder="Ej: Juan" dense lazy-rules :rules="[val => !!val || 'El nombre es obligatorio']">
+                      <template v-slot:prepend><q-icon name="person" color="grey-7" /></template>
+                    </q-input>
+                  </div>
+
+                  <div class="col-12 col-md-6">
+                    <div class="input-label">Apellidos</div>
+                    <q-input v-model="formData.apellidos" outlined placeholder="Ej: Pérez" dense lazy-rules :rules="[val => !!val || 'Los apellidos son obligatorios']">
+                      <template v-slot:prepend><q-icon name="person_outline" color="grey-7" /></template>
+                    </q-input>
+                  </div>
+
+                  <div class="col-12 q-mt-md">
                     <div class="form-section-title">Información de Identidad</div>
                   </div>
 
@@ -157,7 +175,17 @@ const loading = ref(false)
 const showPassword = ref(false)
 const confirmPassword = ref('')
 
-const formData = reactive({ tipo_documento: '', numero_documento: '', fecha_expedicion: '', eps: '', tipo_afiliado: '', correo: '', password: '' })
+const formData = reactive({ 
+  nombre: '', 
+  apellidos: '', 
+  tipo_documento: '', 
+  numero_documento: '', 
+  fecha_expedicion: '', 
+  eps: '', 
+  tipo_afiliado: '', 
+  correo: '', 
+  password: '' 
+})
 
 const opcionesDocumento = [{ label: 'Cédula de Ciudadanía', value: 'CC' }, { label: 'Cédula de Extranjería', value: 'CE' }, { label: 'Pasaporte', value: 'PA' }]
 const opcionesEPS = [{ label: 'Sura', value: 'Sura' }, { label: 'Sanitas', value: 'Sanitas' }, { label: 'Compensar', value: 'Compensar' }, { label: 'Nueva EPS', value: 'Nueva EPS' }, { label: 'Salud Total', value: 'Salud Total' }, { label: 'Famisanar', value: 'Famisanar' }]

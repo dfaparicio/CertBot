@@ -15,6 +15,26 @@
               <AppCard class="no-shadow border-grey">
                 <q-form @submit.prevent="submitReporte" class="q-gutter-y-sm">
                   
+                  <!-- SECCIÓN DE SUPERVISOR -->
+                  <div class="col-12 q-mb-md">
+                    <div class="text-weight-bold q-mb-xs text-sena-blue" style="color: var(--sena-navy) !important;">Supervisor Encargado</div>
+                    <q-select 
+                      v-model="formData.supervisorId" 
+                      outlined
+                      dense
+                      :options="supervisoresOptions" 
+                      emit-value 
+                      map-options 
+                      :rules="[v => !!v || 'Seleccione su supervisor']"
+                      bg-color="white"
+                      style="color: var(--sena-navy) !important;"
+                      :loading="loadingSupervisores"
+                    >
+                      <template #prepend><q-icon name="person" color="primary" /></template>
+                    </q-select>
+                    <div class="text-caption text-grey-7 q-ml-xs">Este supervisor quedará asignado para sus próximos reportes hasta que lo cambie.</div>
+                  </div>
+
                   <div class="col-12 q-mb-lg">
                     <div class="text-weight-bold q-mb-xs text-sena-blue" style="color: var(--sena-navy) !important;">Plataforma de Pago</div>
                     <q-select 
@@ -122,10 +142,10 @@
 </template>
 
 <script setup>
-import { reactive, ref, computed } from 'vue'
+import { reactive, ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
-import { postData } from '../services/api'
+import { postData, getData } from '../services/api'
 import { useMainStore } from '../store/store'
 import AppHeader from '../components/AppHeader.vue'
 import AppFooter from '../components/AppFooter.vue'
@@ -135,6 +155,8 @@ const $q = useQuasar()
 const router = useRouter()
 const store = useMainStore()
 const loading = ref(false)
+const loadingSupervisores = ref(false)
+const supervisores = ref([])
 
 const formatCurrency = (val) => {
   return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(val)
@@ -154,6 +176,7 @@ const opcionesPlataforma = [
 ]
 
 const formData = reactive({
+  supervisorId: store.user?.supervisorId || '',
   pagina: '', 
   dia: new Date().getDate(), 
   ano: new Date().getFullYear(),
@@ -178,6 +201,31 @@ const opUstedEs = [{label: 'Cotizante Activo', value: 0}, {label: 'Pensionado', 
 const opCert = [{label: 'Seguridad Social', value: 0}, {label: 'Cesantías', value: 1}]
 const opRep = [{label: 'Sin Valores', value: 0}, {label: 'Con Valores', value: 1}]
 
+const supervisoresOptions = computed(() => {
+  return supervisores.value.map(s => ({
+    label: `${s.nombre} ${s.apellidos}`,
+    value: s._id
+  }))
+})
+
+const fetchSupervisores = async () => {
+  loadingSupervisores.value = true
+  try {
+    const res = await getData('/auth/supervisores')
+    if (res.ok) {
+      supervisores.value = res.supervisores
+    }
+  } catch (error) {
+    console.error('Error cargando supervisores:', error)
+  } finally {
+    loadingSupervisores.value = false
+  }
+}
+
+onMounted(() => {
+  fetchSupervisores()
+})
+
 const submitReporte = async () => {
   if (!store.user?._id) {
     $q.notify({ type: 'negative', message: 'Sesión expirada. Por favor inicie sesión.' })
@@ -188,10 +236,9 @@ const submitReporte = async () => {
   loading.value = true
   
   try {
-    // Construimos el payload con valores por defecto para los campos no visibles según la plataforma
-    // para cumplir con las validaciones de Mongoose (required: true)
     const payload = {
       contratistaId: store.user._id,
+      supervisorId: formData.supervisorId,
       pagina: formData.pagina,
       dia: Number(formData.dia),
       ano: Number(formData.ano),
@@ -212,6 +259,12 @@ const submitReporte = async () => {
     const res = await postData('/reporte/crear', payload)
     
     if (res.ok && res.reporte?._id) {
+      
+      // Actualizar el supervisor en el store del usuario para que se mantenga en la sesión
+      if (store.user) {
+        store.user.supervisorId = formData.supervisorId
+      }
+
       $q.notify({
         type: 'positive',
         message: '¡Reporte guardado! Iniciando automatización...',

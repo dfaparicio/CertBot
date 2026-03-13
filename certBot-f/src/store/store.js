@@ -12,6 +12,8 @@ export const useMainStore = defineStore('store', () => {
   const logout = () => {
     token.value = ''
     user.value = null
+    // El plugin de persistencia se encargará de limpiar el localStorage automáticamente
+    // al detectar que el estado ha vuelto a sus valores iniciales.
   }
 
   return { token, user, isDrawerOpen, logout }
