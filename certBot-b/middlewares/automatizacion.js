@@ -6,7 +6,7 @@ import { automatizarAportesEnLinea } from './paginas/aportesEnLinea.js';
 import { automatizarMiPlanilla } from './paginas/miPlanilla.js';
 import { automatizarSOI } from './paginas/soi.js';
 import { automatizarAsopagos } from './paginas/asopagos.js';
-import { subirADrive } from '../helpers/googleDrive.js';
+import { manejarSubidaADrive, procesarZip } from '../helpers/descargas.js';
 
 const MODELOS = {
     'Mi Planilla': MiPlanilla,
@@ -91,28 +91,32 @@ const procesarReporte = async (reporteId, pagina, taskKey) => {
         let terminarSubida;
         const pendienteSubida = new Promise(resolve => terminarSubida = resolve);
 
-        const manejarDescarga = async (fullPath, fileName) => {
-            try {
-                const anio = reporte.ano || new Date().getFullYear();
-                const mesNombre = reporte.mes_inicio || "Mes";
-                const supervisor = contratista.supervisorId;
-                const supervisorName = supervisor ? `${supervisor.nombre} ${supervisor.apellidos}`.trim() : "General";
-                await subirADrive(fullPath, fileName, supervisorName, mesNombre, anio);
-                reporte.estado_descarga = true;
-                await reporte.save();
-            } finally {
-                terminarSubida();
+        const manejarArchivo = async (fullPath, fileName) => {
+            const docNum = contratista.numero_documento;
+            const nombre = (contratista.nombre || 'Sin').trim().replace(/\s+/g, '_');
+            const apellido = (contratista.apellidos || 'Nombre').trim().replace(/\s+/g, '_');
+            const nombreLimpio = `${nombre}_${apellido}`;
+
+            if (fileName.toLowerCase().endsWith('.zip')) {
+                await procesarZip(fullPath, fileName, downloadPath, nombreLimpio, docNum, reporte, contratista);
+            } else {
+                await manejarSubidaADrive(fullPath, fileName, reporte, contratista);
             }
+            terminarSubida();
         };
 
         context.on('download', async (download) => {
             const docNum = contratista.numero_documento;
             const nombre = (contratista.nombre || 'Sin').trim().replace(/\s+/g, '_');
             const apellido = (contratista.apellidos || 'Nombre').trim().replace(/\s+/g, '_');
-            const fileName = `${nombre}_${apellido}_${docNum}.pdf`;
+
+            const suggestedFileName = download.suggestedFilename();
+            const extension = suggestedFileName.split('.').pop() || 'pdf';
+            const fileName = `${nombre}_${apellido}_${docNum}.${extension}`;
             const fullPath = path.join(downloadPath, fileName);
+
             await download.saveAs(fullPath);
-            await manejarDescarga(fullPath, fileName);
+            await manejarArchivo(fullPath, fileName);
         });
 
         context.on('page', async (newPage) => {
@@ -125,12 +129,14 @@ const procesarReporte = async (reporteId, pagina, taskKey) => {
                 const docNum = contratista.numero_documento;
                 const nombre = (contratista.nombre || 'Sin').trim().replace(/\s+/g, '_');
                 const apellido = (contratista.apellidos || 'Nombre').trim().replace(/\s+/g, '_');
+
                 const fileName = `${nombre}_${apellido}_${docNum}_V.pdf`;
                 const fullPath = path.join(downloadPath, fileName);
                 fs.writeFileSync(fullPath, await response.body());
-                await manejarDescarga(fullPath, fileName);
+                await manejarArchivo(fullPath, fileName);
             }
         });
+
 
         switch (pagina) {
             case 'Aportes en Línea': await automatizarAportesEnLinea(page, contratista, reporte); break;
