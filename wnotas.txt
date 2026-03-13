@@ -1,0 +1,10 @@
+🔑 Credenciales de Acceso
+  ┌───────────────┬───────────────────────────┬────────────┬────────────┐
+  │ Rol           │ Correo                    │ Contraseña │ Documento  │
+  ├───────────────┼───────────────────────────┼────────────┼────────────┤
+  │ Supervisor    │ cperez@ejemplo.com        │ 123456     │ 10203040   │
+  │ Contratista 1 │ yurley.bernal@correo.com  │ 123456     │ 1100971554 │
+  │ Contratista 2 │ monica.barrera@correo.com │ 123456     │ 37898093   │
+  │ Contratista 3 │ luis.gonzalez@correo.com  │ 123456     │ 79794241   │
+  │ Contratista 4 │ miguel.dulcey@correo.com  │ 123456     │ 91075655   │
+  └───────────────┴───────────────────────────┴────────────┴────────────┘

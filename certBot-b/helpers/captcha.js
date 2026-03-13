@@ -10,6 +10,7 @@ export async function resolverCaptcha(page, selectorImg, selectorInput) {
 
     try {
         await page.waitForSelector(selectorImg, { timeout: 10000 });
+        await page.waitForTimeout(1500); // Pequeña espera para asegurar que la imagen cargue
         const elementoImg = await page.$(selectorImg);
         
         // Capturamos como buffer (archivo binario) para evitar problemas de base64
@@ -35,8 +36,8 @@ export async function resolverCaptcha(page, selectorImg, selectorInput) {
         const taskId = res.data.request;
         let respuesta = '';
 
-        for (let i = 0; i < 20; i++) {
-            await new Promise(r => setTimeout(r, 5000));
+        for (let i = 0; i < 30; i++) {
+            await new Promise(r => setTimeout(r, 2500));
             const consulta = await axios.get('https://2captcha.com/res.php', {
                 params: {
                     key: process.env.TWOCAPTCHA_KEY,
@@ -89,8 +90,8 @@ export async function resolverReCaptcha(page, siteKey, url) {
         const taskId = res.data.request;
         let gResponse = '';
 
-        for (let i = 0; i < 30; i++) {
-            await new Promise(r => setTimeout(r, 5000));
+        for (let i = 0; i < 40; i++) {
+            await new Promise(r => setTimeout(r, 4000));
             const consulta = await axios.get('https://2captcha.com/res.php', {
                 params: {
                     key: process.env.TWOCAPTCHA_KEY,

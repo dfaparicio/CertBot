@@ -6,6 +6,7 @@ import { automatizarAportesEnLinea } from './paginas/aportesEnLinea.js';
 import { automatizarMiPlanilla } from './paginas/miPlanilla.js';
 import { automatizarSOI } from './paginas/soi.js';
 import { automatizarAsopagos } from './paginas/asopagos.js';
+import { subirADrive } from '../helpers/googleDrive.js';
 
 const MODELOS = {
     'Mi Planilla': MiPlanilla,
@@ -14,6 +15,7 @@ const MODELOS = {
     'Asopagos': Asopagos
 };
 
+// Mapa de códigos de documentos (Se mantiene igual)
 export const DOC_CODES = {
     'Aportes en Línea': { 'Cédula de ciudadania': '1', 'Cédula de Ciudadanía': '1', 'Cédula de extranjería': '2', 'Cédula de Extranjería': '2', 'Tarjeta de identidad': '3', 'NIT': '4' },
     'Mi Planilla': { 'Cédula de ciudadania': 'CC', 'Cédula de Ciudadanía': 'CC', 'Cédula de extranjería': 'CE', 'Cédula de Extranjería': 'CE', 'Tarjeta de identidad': 'TI', 'NIT': 'NI' },
@@ -54,20 +56,34 @@ export const procesarReporte = async (reporteId, pagina) => {
         const downloadPath = path.join(process.cwd(), 'descargas');
         if (!fs.existsSync(downloadPath)) fs.mkdirSync(downloadPath, { recursive: true });
 
-        // Escuchador de descargas (Tanto para Headless como Visible)
+        // Escuchador de descargas dinámico (PDF, PNG, JPG, etc.)
         page.on('download', async (download) => {
             try {
-                const fileName = `Certificado_${pagina.replace(/ /g, '_')}_${contratista.numero_documento}_${Date.now()}.pdf`;
-                await download.saveAs(path.join(downloadPath, fileName));
-                console.log(`✅ Archivo descargado exitosamente: ${fileName}`);
+                const docNum = contratista.numero_documento;
+                // Obtenemos el nombre de la DB si existe, si no usamos un genérico con el documento
+                const nombreLimpio = (contratista.nombre || contratista.nombre_completo || `Contratista_${docNum}`).trim().replace(/\s+/g, '_');
                 
+                const suggestedFileName = download.suggestedFilename();
+                const extension = suggestedFileName.split('.').pop() || 'pdf';
+                const fileName = `${nombreLimpio}_${docNum}.${extension}`;
+                const fullPath = path.join(downloadPath, fileName);
+
+                await download.saveAs(fullPath);
+                console.log(`✅ Archivo guardado localmente: ${fileName}`);
+                
+                // Lógica de Drive: Año > Mes > Supervisor
+                const anio = reporte.ano;
+                const mesNombre = reporte.mes_inicio; 
+                const supervisorName = "Carlos Perez Rodriguez"; // Supervisor por defecto
+
+                await subirADrive(fullPath, fileName, supervisorName, mesNombre, anio);
                 // Actualizamos el reporte inmediatamente
                 reporte.estado_descarga = true;
                 await reporte.save();
                 console.log(`💾 Estado del reporte actualizado a 'descargado: true'`);
 
             } catch (err) {
-                console.error('❌ Error al guardar el archivo:', err.message);
+                console.error('❌ Error en el proceso de guardado/subida:', err.message);
             }
         });
 
