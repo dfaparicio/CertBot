@@ -15,8 +15,11 @@ const MODELOS = {
     'Asopagos': Asopagos
 };
 
-// Set para evitar ejecuciones duplicadas simultáneas
+// Set para evitar ejecuciones duplicadas simultáneas del mismo reporte
 const reportesEnProceso = new Set();
+// Cola de tareas pendientes
+const colaTareas = [];
+let botTrabajando = false;
 
 // Mapa de códigos de documentos (Se mantiene igual)
 export const DOC_CODES = {
@@ -35,15 +38,51 @@ export async function escribirHumano(page, selector, texto) {
     await page.type(selector, texto.toString(), { delay: Math.random() * (120 - 40) + 40 });
 }
 
-export const procesarReporte = async (reporteId, pagina) => {
-    const Modelo = MODELOS[pagina];
-    if (!Modelo) return;
+export const ejecutarBot = async (req, res) => {
+    const { reporteId, pagina } = req.body;
+    if (!reporteId || !pagina) return res.status(400).json({ ok: false, msg: 'Faltan parámetros' });
 
     const taskKey = `${pagina}_${reporteId}`;
     if (reportesEnProceso.has(taskKey)) {
-        console.log(`⚠️ El bot ya está procesando ${pagina} para este reporte. Ignorando...`);
-        return;
+        return res.json({ ok: true, msg: 'Este reporte ya está en cola o procesándose' });
     }
+
+    // Añadir a la cola
+    colaTareas.push({ reporteId, pagina, taskKey });
+    reportesEnProceso.add(taskKey);
+
+    console.log(`📥 Tarea añadida a la cola: ${pagina} (${reporteId}). Total en cola: ${colaTareas.length}`);
+
+    // Intentar disparar el worker si no hay nadie trabajando
+    procesarCola();
+
+    res.json({ ok: true, msg: 'Tarea añadida a la cola de espera' });
+};
+
+async function procesarCola() {
+    if (botTrabajando || colaTareas.length === 0) return;
+
+    botTrabajando = true;
+    const { reporteId, pagina, taskKey } = colaTareas.shift();
+
+    console.log(`\n🤖 [Queue] Iniciando siguiente tarea: ${pagina}. Quedan en espera: ${colaTareas.length}`);
+    
+    try {
+        await procesarReporte(reporteId, pagina, taskKey);
+    } catch (err) {
+        console.error(`❌ [Queue] Error procesando tarea:`, err.message);
+    } finally {
+        botTrabajando = false;
+        // Liberamos de reportesEnProceso solo después de que realmente terminó
+        reportesEnProceso.delete(taskKey);
+        // Llamada recursiva para procesar el siguiente
+        procesarCola();
+    }
+}
+
+const procesarReporte = async (reporteId, pagina, taskKey) => {
+    const Modelo = MODELOS[pagina];
+    if (!Modelo) return;
 
     let browser;
     try {
@@ -52,10 +91,10 @@ export const procesarReporte = async (reporteId, pagina) => {
             populate: { path: 'supervisorId' }
         });
 
-        if (!reporte || reporte.estado_descarga) return;
-
-        // Marcamos como en proceso
-        reportesEnProceso.add(taskKey);
+        if (!reporte || reporte.estado_descarga) {
+            console.log(`⏭️ Saltando reporte ${reporteId}: ya descargado o no encontrado.`);
+            return;
+        }
 
         const contratista = reporte.contratistaId;
         if (!contratista) return;
@@ -181,14 +220,7 @@ export const procesarReporte = async (reporteId, pagina) => {
         console.error(`❌ Error en el Bot (${pagina}):`, error.message);
     } finally {
         if (browser) await browser.close();
-        // Liberamos el bloqueo
-        reportesEnProceso.delete(taskKey);
     }
 };
 
-export const ejecutarBot = async (req, res) => {
-    const { reporteId, pagina } = req.body;
-    if (!reporteId || !pagina) return res.status(400).json({ ok: false, msg: 'Faltan parámetros' });
-    procesarReporte(reporteId, pagina);
-    res.json({ ok: true, msg: 'Bot disparado' });
-};
+

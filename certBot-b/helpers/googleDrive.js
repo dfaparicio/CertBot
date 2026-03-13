@@ -19,7 +19,12 @@ const drive = google.drive({ version: 'v3', auth });
 const obtenerOCrearCarpeta = async (nombre, parentId) => {
     try {
         const query = `name = '${nombre}' and '${parentId}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`;
-        const res = await drive.files.list({ q: query, fields: 'files(id)' });
+        const res = await drive.files.list({
+            q: query,
+            fields: 'files(id)',
+            supportsAllDrives: true,
+            includeItemsFromAllDrives: true
+        });
 
         if (res.data.files.length > 0) {
             return res.data.files[0].id;
@@ -34,6 +39,7 @@ const obtenerOCrearCarpeta = async (nombre, parentId) => {
         const folder = await drive.files.create({
             resource: fileMetadata,
             fields: 'id',
+            supportsAllDrives: true
         });
         return folder.data.id;
     } catch (error) {
@@ -73,6 +79,7 @@ export const subirADrive = async (filePath, fileName, supervisorName, mes, anio)
             resource: fileMetadata,
             media: media,
             fields: 'id, webViewLink',
+            supportsAllDrives: true
         });
 
         console.log(`✅ Archivo subido a Drive: ${fileName} en carpeta ${supervisorName}`);
