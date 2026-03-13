@@ -1,4 +1,4 @@
-import { escribirHumano, DOC_CODES, esperarAleatorio } from '../automatizacion.js';
+import { escribirHumano, DOC_CODES, esperarAleatorio } from '../../helpers/botUtils.js';
 import { resolverReCaptcha } from '../../helpers/captcha.js';
 
 export async function automatizarAportesEnLinea(page, contratista, reporte) {
