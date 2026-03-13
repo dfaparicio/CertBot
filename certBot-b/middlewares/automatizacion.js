@@ -66,41 +66,83 @@ export const procesarReporte = async (reporteId, pagina) => {
             args: ['--no-sandbox', '--disable-setuid-sandbox']
         });
 
-        const page = await (await browser.newContext()).newPage();
+        const context = await browser.newContext();
+        const page = await context.newPage();
 
         // Directorio de descargas
         const downloadPath = path.join(process.cwd(), 'descargas');
         if (!fs.existsSync(downloadPath)) fs.mkdirSync(downloadPath, { recursive: true });
 
-        // Escuchador de descargas dinámico (PDF, PNG, JPG, etc.)
-        page.on('download', async (download) => {
+        // Sincronización de subida
+        let terminarSubida;
+        const pendienteSubida = new Promise(resolve => terminarSubida = resolve);
+        let archivosProcesados = 0;
+
+        const manejarDescarga = async (fullPath, fileName) => {
+            try {
+                // Lógica de Drive: Año > Mes > Supervisor
+                const anio = reporte.ano || new Date().getFullYear();
+                const mesNombre = reporte.mes_inicio || "Mes_Sin_Definir";
+                const supervisor = contratista.supervisorId;
+                const supervisorName = supervisor ? `${supervisor.nombre} ${supervisor.apellidos}`.trim() : "Supervisor_General";
+
+                console.log(`☁️ Iniciando subida a Drive para: ${fileName}...`);
+                await subirADrive(fullPath, fileName, supervisorName, mesNombre, anio);
+                
+                reporte.estado_descarga = true;
+                await reporte.save();
+                console.log(`💾 Reporte actualizado y subido con éxito.`);
+            } catch (err) {
+                console.error('❌ Error en el proceso de subida:', err.message);
+            } finally {
+                archivosProcesados++;
+                terminarSubida();
+            }
+        };
+
+        // 1. Escuchar descargas en TODO el contexto (pestañas nuevas, popups, etc.)
+        context.on('download', async (download) => {
             try {
                 const docNum = contratista.numero_documento;
-                // Obtenemos el nombre de la DB si existe, si no usamos un genérico con el documento
                 const nombreLimpio = (contratista.nombre || contratista.nombre_completo || `Contratista_${docNum}`).trim().replace(/\s+/g, '_');
-
                 const suggestedFileName = download.suggestedFilename();
                 const extension = suggestedFileName.split('.').pop() || 'pdf';
                 const fileName = `${nombreLimpio}_${docNum}.${extension}`;
                 const fullPath = path.join(downloadPath, fileName);
 
                 await download.saveAs(fullPath);
-                console.log(`✅ Archivo guardado localmente: ${fileName}`);
-
-                // Lógica de Drive: Año > Mes > Supervisor
-                const anio = reporte.ano;
-                const mesNombre = reporte.mes_inicio;
-                const supervisor = contratista.supervisorId;
-                const supervisorName = supervisor ? `${supervisor.nombre} ${supervisor.apellidos}` : "Supervisor_General";
-
-                await subirADrive(fullPath, fileName, supervisorName, mesNombre, anio);
-                // Actualizamos el reporte inmediatamente
-                reporte.estado_descarga = true;
-                await reporte.save();
-                console.log(`💾 Estado del reporte actualizado a 'descargado: true'`);
-
+                console.log(`✅ Archivo capturado vía descarga: ${fileName}`);
+                await manejarDescarga(fullPath, fileName);
             } catch (err) {
-                console.error('❌ Error en el proceso de guardado/subida:', err.message);
+                console.error('❌ Fallo en captura de descarga:', err.message);
+                terminarSubida();
+            }
+        });
+
+        // 2. Escuchar pestañas nuevas que puedan ser el PDF visor
+        context.on('page', async (newPage) => {
+            console.log('📄 Nueva pestaña detectada, monitoreando contenido...');
+            try {
+                // Si la URL termina en .pdf o el Content-Type es PDF
+                const response = await newPage.waitForResponse(res => 
+                    res.url().toLowerCase().endsWith('.pdf') || 
+                    res.headers()['content-type']?.includes('application/pdf'), 
+                    { timeout: 15000 }
+                ).catch(() => null);
+
+                if (response) {
+                    const docNum = contratista.numero_documento;
+                    const nombreLimpio = (contratista.nombre || contratista.nombre_completo || `Contratista_${docNum}`).trim().replace(/\s+/g, '_');
+                    const fileName = `${nombreLimpio}_${docNum}_V.pdf`;
+                    const fullPath = path.join(downloadPath, fileName);
+                    
+                    const buffer = await response.body();
+                    fs.writeFileSync(fullPath, buffer);
+                    console.log(`✅ Archivo capturado vía visor PDF: ${fileName}`);
+                    await manejarDescarga(fullPath, fileName);
+                }
+            } catch (e) {
+                // Silencioso si no es un PDF
             }
         });
 
@@ -114,17 +156,25 @@ export const procesarReporte = async (reporteId, pagina) => {
         }
 
         if (isHeadless) {
-            // En headless, esperamos específicamente el evento de descarga por 30 segundos
             try {
-                await page.waitForEvent('download', { timeout: 30000 });
-                // Esperamos un segundito extra para asegurar el guardado por el listener
-                await page.waitForTimeout(2000);
+                // Esperamos descarga o un tiempo prudente
+                await Promise.race([
+                    page.waitForEvent('download', { timeout: 40000 }),
+                    pendienteSubida,
+                    new Promise(r => setTimeout(r, 45000))
+                ]);
             } catch (e) {
-                console.log('⚠️ El bot terminó pero no se detectó ninguna descarga.');
+                console.log('⚠️ Finalizando espera de descarga.');
             }
         } else {
-            // En visible esperamos a que el usuario cierre el navegador
-            await page.waitForEvent('close', { timeout: 0 });
+            console.log('📝 Modo Visible: El bot esperará a que el navegador se cierre o termine la subida.');
+            // En visible, esperamos a que el usuario cierre O termine la subida
+            await Promise.race([
+                page.waitForEvent('close', { timeout: 0 }),
+                pendienteSubida
+            ]);
+            // Pequeña espera extra si acaba de terminar
+            await new Promise(r => setTimeout(r, 2000));
         }
 
     } catch (error) {
