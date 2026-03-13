@@ -38,7 +38,10 @@ export const procesarReporte = async (reporteId, pagina) => {
 
     let browser;
     try {
-        const reporte = await Modelo.findById(reporteId).populate('contratistaId');
+        const reporte = await Modelo.findById(reporteId).populate({
+            path: 'contratistaId',
+            populate: { path: 'supervisorId' }
+        });
         if (!reporte || reporte.estado_descarga) return;
 
         const contratista = reporte.contratistaId;
@@ -74,7 +77,8 @@ export const procesarReporte = async (reporteId, pagina) => {
                 // Lógica de Drive: Año > Mes > Supervisor
                 const anio = reporte.ano;
                 const mesNombre = reporte.mes_inicio; 
-                const supervisorName = "Carlos Perez Rodriguez"; // Supervisor por defecto
+                const supervisor = contratista.supervisorId;
+                const supervisorName = supervisor ? `${supervisor.nombre} ${supervisor.apellidos}` : "Supervisor_General";
 
                 await subirADrive(fullPath, fileName, supervisorName, mesNombre, anio);
                 // Actualizamos el reporte inmediatamente
