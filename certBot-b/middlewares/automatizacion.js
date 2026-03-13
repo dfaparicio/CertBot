@@ -72,11 +72,14 @@ export const procesarReporte = async (reporteId, pagina) => {
         const downloadPath = path.join(process.cwd(), 'descargas');
         if (!fs.existsSync(downloadPath)) fs.mkdirSync(downloadPath, { recursive: true });
 
-        // Escuchador de descargas dinámico (PDF, PNG, JPG, etc.)
+        // Variable para rastrear la subida
+        let subidaTerminada;
+        const pendienteSubida = new Promise(resolve => subidaTerminada = resolve);
+
+        // Escuchador de descargas dinámico
         page.on('download', async (download) => {
             try {
                 const docNum = contratista.numero_documento;
-                // Obtenemos el nombre de la DB si existe, si no usamos un genérico con el documento
                 const nombreLimpio = (contratista.nombre || contratista.nombre_completo || `Contratista_${docNum}`).trim().replace(/\s+/g, '_');
                 
                 const suggestedFileName = download.suggestedFilename();
@@ -85,22 +88,26 @@ export const procesarReporte = async (reporteId, pagina) => {
                 const fullPath = path.join(downloadPath, fileName);
 
                 await download.saveAs(fullPath);
-                console.log(`✅ Archivo guardado localmente: ${fileName}`);
+                console.log(`✅ Archivo guardado localmente: ${fullPath}`);
                 
                 // Lógica de Drive: Año > Mes > Supervisor
-                const anio = reporte.ano;
-                const mesNombre = reporte.mes_inicio; 
+                const anio = reporte.ano || new Date().getFullYear();
+                const mesNombre = reporte.mes_inicio || "Mes_Sin_Definir"; 
                 const supervisor = contratista.supervisorId;
-                const supervisorName = supervisor ? `${supervisor.nombre} ${supervisor.apellidos}` : "Supervisor_General";
+                const supervisorName = supervisor ? `${supervisor.nombre} ${supervisor.apellidos}`.trim() : "Supervisor_General";
 
+                console.log(`☁️ Iniciando subida a Drive para: ${fileName}...`);
                 await subirADrive(fullPath, fileName, supervisorName, mesNombre, anio);
-                // Actualizamos el reporte inmediatamente
+                
+                // Actualizamos el reporte
                 reporte.estado_descarga = true;
                 await reporte.save();
-                console.log(`💾 Estado del reporte actualizado a 'descargado: true'`);
+                console.log(`💾 Reporte actualizado en DB.`);
 
             } catch (err) {
                 console.error('❌ Error en el proceso de guardado/subida:', err.message);
+            } finally {
+                subidaTerminada(); // Avisamos que terminamos el proceso (éxito o error)
             }
         });
 
@@ -114,17 +121,19 @@ export const procesarReporte = async (reporteId, pagina) => {
         }
 
         if (isHeadless) {
-            // En headless, esperamos específicamente el evento de descarga por 30 segundos
             try {
-                await page.waitForEvent('download', { timeout: 30000 });
-                // Esperamos un segundito extra para asegurar el guardado por el listener
-                await page.waitForTimeout(2000); 
+                await page.waitForEvent('download', { timeout: 35000 });
+                console.log('⏳ Esperando a que termine la subida a Drive...');
+                await pendienteSubida; // Esperamos a que el listener termine
             } catch (e) {
                 console.log('⚠️ El bot terminó pero no se detectó ninguna descarga.');
             }
         } else {
-            // En visible esperamos a que el usuario cierre el navegador
+            // En visible esperamos a que el usuario cierre o que la subida termine
+            console.log('📝 Modo Visible: El bot esperará a que el navegador se cierre.');
             await page.waitForEvent('close', { timeout: 0 });
+            console.log('⏳ Asegurando que la subida a Drive finalice...');
+            await Promise.race([pendienteSubida, new Promise(r => setTimeout(r, 10000))]);
         }
 
     } catch (error) {
