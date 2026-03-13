@@ -7,6 +7,8 @@ export async function automatizarMiPlanilla(page, contratista, reporte) {
         await page.goto('https://www.miplanilla.com/Private/Consultaplanillaindependiente.aspx', { waitUntil: 'domcontentloaded' });
 
         const tipoIdValue = DOC_CODES['Mi Planilla'][contratista.tipo_documento] || 'CC';
+        console.log(`📝 Ingresando datos Mi Planilla: ${contratista.numero_documento} (${tipoIdValue})`);
+        
         await page.selectOption('select#cp1_ddlTipoDocumento', tipoIdValue);
         await escribirHumano(page, 'input#cp1_txtNumeroDocumento', contratista.numero_documento);
 
@@ -32,10 +34,13 @@ export async function automatizarMiPlanilla(page, contratista, reporte) {
         }
 
         // Resolución de Captcha de Imagen
-        await resolverCaptcha(page, 'img[src*="captchaImage.aspx"]', '#cp1_txtCaptcha');
+        const resuelto = await resolverCaptcha(page, 'img[src*="captchaImage.aspx"]', '#cp1_txtCaptcha');
 
-        if (process.env.BOT_HEADLESS === 'true') {
+        if (resuelto) {
+            console.log('✅ Captcha superado, procediendo a descargar...');
             await page.click('#cp1_ButtonConsultar');
+        } else {
+            console.error('❌ No se pudo resolver el captcha en Mi Planilla.');
         }
     } catch (err) {
         console.error('❌ Error en automatizarMiPlanilla:', err.message);

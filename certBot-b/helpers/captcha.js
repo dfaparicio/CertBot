@@ -59,14 +59,17 @@ export async function resolverCaptcha(page, selectorImg, selectorInput) {
         if (respuesta) {
             console.log('🤖 Captcha Resuelto por 2Captcha:', respuesta);
             await escribirHumano(page, selectorInput, respuesta);
+            return true;
         }
+        return false;
     } catch (e) {
         console.error('❌ Fallo al resolver captcha:', e.message);
+        return false;
     }
 }
 
 export async function resolverReCaptcha(page, siteKey, url) {
-    if (!process.env.TWOCAPTCHA_KEY || process.env.TWOCAPTCHA_KEY === 'TU_CLAVE_DE_2CAPTCHA_AQUI') return;
+    if (!process.env.TWOCAPTCHA_KEY || process.env.TWOCAPTCHA_KEY === 'TU_CLAVE_DE_2CAPTCHA_AQUI') return false;
 
     try {
         console.log('🤖 Solicitando resolución de reCAPTCHA a 2Captcha...');
@@ -119,8 +122,11 @@ export async function resolverReCaptcha(page, siteKey, url) {
                     el.innerHTML = token;
                 }
             }, gResponse);
+            return true;
         }
+        return false;
     } catch (e) {
         console.error('❌ Error en reCAPTCHA:', e.message);
+        return false;
     }
 }

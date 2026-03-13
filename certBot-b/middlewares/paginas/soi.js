@@ -10,6 +10,7 @@ export async function automatizarSOI(page, contratista, reporte) {
         await page.waitForSelector('select#tipoDocumentoAportante', { timeout: 10000 });
 
         const tipoIdValue = DOC_CODES['SOI'][contratista.tipo_documento] || '1';
+        console.log(`📝 Ingresando datos SOI: ${contratista.numero_documento} (${tipoIdValue})`);
         
         await page.selectOption('select#tipoDocumentoAportante', tipoIdValue);
         await page.waitForTimeout(800); // Pausa para evitar error 'limpiarFormulario'
@@ -36,6 +37,7 @@ export async function automatizarSOI(page, contratista, reporte) {
                 }, contratista.eps);
 
                 if (epsValue) {
+                    console.log(`📝 Seleccionando EPS: ${contratista.eps}`);
                     await page.selectOption('select#administradoraSalud', epsValue);
                     await page.dispatchEvent('select#administradoraSalud', 'change');
                     await page.waitForTimeout(500);
@@ -48,16 +50,16 @@ export async function automatizarSOI(page, contratista, reporte) {
         const mes = reporte.mes_inicio || (new Date().getMonth() + 1).toString();
         const ano = reporte.ano || new Date().getFullYear().toString();
 
+        console.log(`📝 Periodo: ${mes}/${ano}`);
         await page.waitForSelector('select#periodoLiqSaludMes');
         await page.selectOption('select#periodoLiqSaludMes', parseInt(mes, 10).toString());
         
         await page.waitForSelector('select#periodoLiqSaludAnnio');
         await page.selectOption('select#periodoLiqSaludAnnio', ano.toString());
 
-        if (process.env.BOT_HEADLESS === 'true') {
-            await page.waitForSelector('button.btn-success');
-            await page.click('button.btn-success');
-        }
+        console.log('✅ Procediendo a descargar en SOI...');
+        await page.waitForSelector('button.btn-success');
+        await page.click('button.btn-success');
     } catch (err) {
         console.error('❌ Error en automatizarSOI:', err.message);
         throw err;

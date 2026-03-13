@@ -13,6 +13,7 @@ export async function automatizarAsopagos(page, contratista, reporte) {
         }
 
         const tipoDoc = DOC_CODES['Asopagos'][contratista.tipo_documento] || 'CC';
+        console.log(`📝 Ingresando datos del contratista: ${contratista.numero_documento} (${tipoDoc})`);
         await page.selectOption('select#tipoID', tipoDoc);
         await escribirHumano(page, 'input#numeroID', contratista.numero_documento);
 
@@ -25,13 +26,17 @@ export async function automatizarAsopagos(page, contratista, reporte) {
         }
 
         const tipoReporte = reporte.tipo_reporte === 1 ? 'conValores' : 'sinValores';
+        console.log(`📝 Seleccionando tipo de reporte: ${tipoReporte}`);
         await page.selectOption('select#tipoReporte', tipoReporte);
 
         // Resolución de Captcha de Imagen
-        await resolverCaptcha(page, 'img#captcha_imgpop', '#captchaIn');
+        const resuelto = await resolverCaptcha(page, 'img#captcha_imgpop', '#captchaIn');
 
-        if (process.env.BOT_HEADLESS === 'true') {
+        if (resuelto) {
+            console.log('✅ Captcha superado, procediendo a descargar...');
             await page.click('#enviarConsRP');
+        } else {
+            console.error('❌ No se pudo resolver el captcha en Asopagos.');
         }
     } catch (err) {
         console.error('❌ Error en automatizarAsopagos:', err.message);

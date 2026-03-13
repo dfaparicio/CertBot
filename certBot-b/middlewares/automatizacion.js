@@ -15,6 +15,9 @@ const MODELOS = {
     'Asopagos': Asopagos
 };
 
+// Set para evitar ejecuciones duplicadas simultáneas
+const reportesEnProceso = new Set();
+
 // Mapa de códigos de documentos (Se mantiene igual)
 export const DOC_CODES = {
     'Aportes en Línea': { 'Cédula de ciudadania': '1', 'Cédula de Ciudadanía': '1', 'Cédula de extranjería': '2', 'Cédula de Extranjería': '2', 'Tarjeta de identidad': '3', 'NIT': '4' },
@@ -36,13 +39,23 @@ export const procesarReporte = async (reporteId, pagina) => {
     const Modelo = MODELOS[pagina];
     if (!Modelo) return;
 
+    const taskKey = `${pagina}_${reporteId}`;
+    if (reportesEnProceso.has(taskKey)) {
+        console.log(`⚠️ El bot ya está procesando ${pagina} para este reporte. Ignorando...`);
+        return;
+    }
+
     let browser;
     try {
         const reporte = await Modelo.findById(reporteId).populate({
             path: 'contratistaId',
             populate: { path: 'supervisorId' }
         });
+
         if (!reporte || reporte.estado_descarga) return;
+
+        // Marcamos como en proceso
+        reportesEnProceso.add(taskKey);
 
         const contratista = reporte.contratistaId;
         if (!contratista) return;
@@ -118,6 +131,8 @@ export const procesarReporte = async (reporteId, pagina) => {
         console.error(`❌ Error en el Bot (${pagina}):`, error.message);
     } finally {
         if (browser) await browser.close();
+        // Liberamos el bloqueo
+        reportesEnProceso.delete(taskKey);
     }
 };
 

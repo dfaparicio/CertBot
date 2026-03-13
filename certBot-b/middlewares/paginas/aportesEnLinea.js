@@ -10,6 +10,8 @@ export async function automatizarAportesEnLinea(page, contratista, reporte) {
         await esperarAleatorio(800, 1500);
 
         const tipoIdValue = DOC_CODES['Aportes en Línea'][contratista.tipo_documento] || '1';
+        console.log(`📝 Ingresando datos Aportes en Línea: ${contratista.numero_documento} (${tipoIdValue})`);
+
         try {
             await page.selectOption('select#contenido_ddlTipoIdent', { value: tipoIdValue, timeout: 3000 });
         } catch (e) {
@@ -27,11 +29,10 @@ export async function automatizarAportesEnLinea(page, contratista, reporte) {
             await escribirHumano(page, 'input#contenido_txtAdmin', contratista.eps);
         }
 
-        if (reporte.ano) {
-            const anioStr = reporte.ano.toString();
-            await page.selectOption('select#contenido_ddlAnioIni', anioStr);
-            await page.selectOption('select#contenido_ddlAnioFin', anioStr);
-        }
+        const anioStr = reporte.ano ? reporte.ano.toString() : new Date().getFullYear().toString();
+        console.log(`📝 Año: ${anioStr}`);
+        await page.selectOption('select#contenido_ddlAnioIni', anioStr);
+        await page.selectOption('select#contenido_ddlAnioFin', anioStr);
 
         if (reporte.mes_inicio) {
             await page.selectOption('select#contenido_ddlMesIni', parseInt(reporte.mes_inicio, 10).toString().padStart(2, '0'));
@@ -48,10 +49,13 @@ export async function automatizarAportesEnLinea(page, contratista, reporte) {
         }
 
         // Resolución de reCAPTCHA
-        await resolverReCaptcha(page, '6Lc6FDMUAAAAAKwQX0_xF92Z1MiUXm4sYbQ6bh6J', page.url());
+        const resuelto = await resolverReCaptcha(page, '6Lc6FDMUAAAAAKwQX0_xF92Z1MiUXm4sYbQ6bh6J', page.url());
 
-        if (process.env.BOT_HEADLESS === 'true') {
+        if (resuelto) {
+            console.log('✅ reCAPTCHA superado, procediendo a descargar...');
             await page.click('#contenido_btnCalcular');
+        } else {
+            console.error('❌ No se pudo resolver el reCAPTCHA en Aportes en Línea.');
         }
     } catch (err) {
         console.error('❌ Error en automatizarAportesEnLinea:', err.message);
