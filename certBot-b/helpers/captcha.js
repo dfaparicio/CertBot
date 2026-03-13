@@ -37,6 +37,10 @@ export async function resolverCaptcha(page, selectorImg, selectorInput) {
         let respuesta = '';
 
         for (let i = 0; i < 30; i++) {
+            if (page.isClosed()) {
+                console.log('⚠️ Navegador cerrado por el usuario. Cancelando captcha.');
+                return false;
+            }
             await new Promise(r => setTimeout(r, 2500));
             const consulta = await axios.get('https://2captcha.com/res.php', {
                 params: {
@@ -57,12 +61,14 @@ export async function resolverCaptcha(page, selectorImg, selectorInput) {
         }
 
         if (respuesta) {
+            if (page.isClosed()) return false;
             console.log('🤖 Captcha Resuelto por 2Captcha:', respuesta);
             await escribirHumano(page, selectorInput, respuesta);
             return true;
         }
         return false;
     } catch (e) {
+        if (e.message.includes('closed')) return false;
         console.error('❌ Fallo al resolver captcha:', e.message);
         return false;
     }
@@ -93,7 +99,11 @@ export async function resolverReCaptcha(page, siteKey, url) {
         const taskId = res.data.request;
         let gResponse = '';
 
-        for (let i = 0; i < 40; i++) {
+        for (let i = 0; i < 45; i++) { // Aumentamos un poco el tiempo para reCAPTCHA
+            if (page.isClosed()) {
+                console.log('⚠️ Navegador cerrado. Cancelando reCAPTCHA.');
+                return false;
+            }
             await new Promise(r => setTimeout(r, 4000));
             const consulta = await axios.get('https://2captcha.com/res.php', {
                 params: {
@@ -114,18 +124,25 @@ export async function resolverReCaptcha(page, siteKey, url) {
         }
 
         if (gResponse) {
+            if (page.isClosed()) return false;
             console.log('✅ reCAPTCHA resuelto con 2Captcha.');
-            await page.evaluate((token) => {
-                const elements = document.getElementsByName('g-recaptcha-response');
-                for (let el of elements) {
-                    el.value = token;
-                    el.innerHTML = token;
-                }
-            }, gResponse);
-            return true;
+            try {
+                await page.evaluate((token) => {
+                    const elements = document.getElementsByName('g-recaptcha-response');
+                    for (let el of elements) {
+                        el.value = token;
+                        el.innerHTML = token;
+                    }
+                }, gResponse);
+                return true;
+            } catch (evalError) {
+                console.log('⚠️ No se pudo inyectar el token (posible cierre de página).');
+                return false;
+            }
         }
         return false;
     } catch (e) {
+        if (e.message.includes('closed')) return false;
         console.error('❌ Error en reCAPTCHA:', e.message);
         return false;
     }
