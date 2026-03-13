@@ -5,13 +5,17 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-// Autenticación con Google Drive
-const auth = new google.auth.GoogleAuth({
-    keyFile: path.join(process.cwd(), process.env.GOOGLE_APPLICATION_CREDENTIALS),
-    scopes: ['https://www.googleapis.com/auth/drive.file'],
+// Configuración de OAuth2
+const oauth2Client = new google.auth.OAuth2(
+    process.env.GOOGLE_CLIENT_ID,
+    process.env.GOOGLE_CLIENT_SECRET
+);
+
+oauth2Client.setCredentials({
+    refresh_token: process.env.GOOGLE_REFRESH_TOKEN
 });
 
-const drive = google.drive({ version: 'v3', auth });
+const drive = google.drive({ version: 'v3', auth: oauth2Client });
 
 /**
  * Busca una carpeta por nombre dentro de un padre. Si no existe, la crea.
@@ -19,8 +23,8 @@ const drive = google.drive({ version: 'v3', auth });
 const obtenerOCrearCarpeta = async (nombre, parentId) => {
     try {
         const query = `name = '${nombre}' and '${parentId}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`;
-        const res = await drive.files.list({
-            q: query,
+        const res = await drive.files.list({ 
+            q: query, 
             fields: 'files(id)',
             supportsAllDrives: true,
             includeItemsFromAllDrives: true
@@ -82,10 +86,10 @@ export const subirADrive = async (filePath, fileName, supervisorName, mes, anio)
             supportsAllDrives: true
         });
 
-        console.log(`✅ Archivo subido a Drive: ${fileName} en carpeta ${supervisorName}`);
+        console.log(`✅ Archivo subido a Drive personales: ${fileName} en carpeta ${supervisorName}`);
         return response.data;
     } catch (error) {
-        console.error('❌ Error subiendo a Google Drive:', error.message);
+        console.error('❌ Error subiendo a Google Drive PERSONAL:', error.message);
         throw error;
     }
 };
