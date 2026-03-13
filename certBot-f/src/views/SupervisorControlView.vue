@@ -64,7 +64,7 @@
           </div>
         </div>
 
-        <!-- SECCIÓN 1: MIS CONTRATISTAS (Principal) -->
+        <!-- SECCIÓN 1: MIS CONTRATISTAS -->
         <div class="q-mb-xl">
           <div class="flex items-center q-mb-md">
             <q-icon name="group" size="24px" color="primary" class="q-mr-sm" />
@@ -118,7 +118,6 @@ const router = useRouter()
 const store = useMainStore()
 
 const loading = ref(false)
-const searchReporte = ref('')
 const reportes = ref([])
 const contratistas = ref([])
 
@@ -133,16 +132,6 @@ const statsReportes = computed(() => [
   { label: 'Rechazados', value: reportes.value.filter(r => r.estado === 'Rechazado').length, icon: 'block', color: 'red' }
 ])
 
-// --- Columnas ---
-const colReportes = [
-  { name: 'contratista', label: 'Contratista / Identidad', align: 'left' },
-  { name: 'pagina', label: 'Plataforma', align: 'left', field: 'pagina' },
-  { name: 'periodo', label: 'Periodo (M/A)', align: 'left', field: row => `${row.mes_inicio}/${row.ano}` },
-  { name: 'valor', label: 'Monto Pagado', align: 'left', field: row => formatCurrency(row.valor_planilla) },
-  { name: 'estado', label: 'Estado Actual', align: 'left' },
-  { name: 'acciones', label: 'Acciones de Gestión', align: 'center' }
-]
-
 const colContratistas = [
   { name: 'nombre_completo', label: 'Nombre Completo', align: 'left' },
   { name: 'numero_documento', label: 'N° Documento', align: 'left', field: 'numero_documento' },
@@ -154,37 +143,11 @@ const colContratistas = [
 // --- Métodos ---
 const formatCurrency = (val) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(val)
 
-const getEstadoColor = (estado) => {
-  switch (estado) {
-    case 'Aprobado': return 'green-7'
-    case 'Rechazado': return 'red-7'
-    case 'Procesado': return 'blue-7'
-    default: return 'orange-8'
-  }
-}
-
-const reportesFiltrados = computed(() => {
-  if (!searchReporte.value) return reportes.value
-  const term = searchReporte.value.toLowerCase()
-  return reportes.value.filter(r => 
-    r.contratistaId?.nombre?.toLowerCase().includes(term) || 
-    r.contratistaId?.apellidos?.toLowerCase().includes(term) ||
-    r.contratistaId?.numero_documento?.includes(term) ||
-    r.pagina.toLowerCase().includes(term)
-  )
-})
-
 const cargarDatos = async () => {
   if (!store.user?._id) return
   loading.value = true
-  
-  // Limpiar para evitar datos residuales
-  reportes.value = []
-  contratistas.value = []
-
   try {
-    const res = await getData(`/reporte/supervisor/${store.user._id}?t=${Date.now()}`)
-    console.log('Datos recibidos del servidor:', res)
+    const res = await getData(`/reporte/supervisor/${store.user._id}`)
     if (res.ok) {
       reportes.value = res.reportes || []
       contratistas.value = res.contratistas || []
@@ -193,21 +156,6 @@ const cargarDatos = async () => {
     $q.notify({ type: 'negative', message: 'Error al conectar con el servidor', position: 'top-right' })
   } finally {
     loading.value = false
-  }
-}
-
-const actualizarEstadoReporte = async (reporte, nuevoEstado) => {
-  try {
-    const res = await putData(`/reporte/actualizar/${reporte._id}`, { 
-      pagina: reporte.pagina, 
-      estado: nuevoEstado 
-    })
-    if (res.ok) {
-      $q.notify({ type: 'positive', message: `Reporte ${nuevoEstado} con éxito`, position: 'top-right' })
-      cargarDatos()
-    }
-  } catch (error) {
-    $q.notify({ type: 'negative', message: 'No se pudo actualizar el estado', position: 'top-right' })
   }
 }
 
@@ -225,9 +173,6 @@ onMounted(() => {
 .container-xl {
   max-width: 1440px;
   margin: 0 auto;
-}
-.header-brand {
-  cursor: default;
 }
 .stat-card {
   border-radius: 12px;
@@ -255,11 +200,5 @@ onMounted(() => {
   background-color: #f8f9fa;
   font-weight: 700;
   color: var(--sena-navy);
-}
-.dashboard-table :deep(thead tr th) {
-  background-color: #f1f3f5;
-  font-weight: 800;
-  color: var(--sena-navy);
-  font-size: 0.85rem;
 }
 </style>
