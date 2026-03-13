@@ -1,4 +1,4 @@
-import { escribirHumano, DOC_CODES } from '../automatizacion.js';
+import { escribirHumano, DOC_CODES, esperarAleatorio } from '../../helpers/botUtils.js';
 import { resolverCaptcha } from '../../helpers/captcha.js';
 
 export async function automatizarAsopagos(page, contratista, reporte) {

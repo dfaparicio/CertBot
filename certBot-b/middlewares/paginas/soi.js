@@ -1,4 +1,4 @@
-import { escribirHumano, DOC_CODES } from '../automatizacion.js';
+import { escribirHumano, DOC_CODES, esperarAleatorio } from '../../helpers/botUtils.js';
 
 export async function automatizarSOI(page, contratista, reporte) {
     try {
