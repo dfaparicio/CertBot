@@ -38,13 +38,12 @@ export async function escribirHumano(page, selector, texto) {
     await page.type(selector, texto.toString(), { delay: Math.random() * (120 - 40) + 40 });
 }
 
-export const ejecutarBot = async (req, res) => {
-    const { reporteId, pagina } = req.body;
-    if (!reporteId || !pagina) return res.status(400).json({ ok: false, msg: 'Faltan parámetros' });
-
+export const encolarReporte = (reporteId, pagina) => {
     const taskKey = `${pagina}_${reporteId}`;
+    
     if (reportesEnProceso.has(taskKey)) {
-        return res.json({ ok: true, msg: 'Este reporte ya está en cola o procesándose' });
+        console.log(`⏩ ${pagina} (${reporteId}) ya está en cola o procesándose.`);
+        return false;
     }
 
     // Añadir a la cola
@@ -55,8 +54,20 @@ export const ejecutarBot = async (req, res) => {
 
     // Intentar disparar el worker si no hay nadie trabajando
     procesarCola();
+    return true;
+};
 
-    res.json({ ok: true, msg: 'Tarea añadida a la cola de espera' });
+export const ejecutarBot = async (req, res) => {
+    const { reporteId, pagina } = req.body;
+    if (!reporteId || !pagina) return res.status(400).json({ ok: false, msg: 'Faltan parámetros' });
+
+    const encolado = encolarReporte(reporteId, pagina);
+
+    if (encolado) {
+        res.json({ ok: true, msg: 'Tarea añadida a la cola de espera' });
+    } else {
+        res.json({ ok: true, msg: 'Este reporte ya está en cola o procesándose' });
+    }
 };
 
 async function procesarCola() {
