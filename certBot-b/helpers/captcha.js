@@ -4,11 +4,15 @@ import { escribirHumano } from '../middlewares/automatizacion.js';
 
 const getTimestamp = () => `[\x1b[90m${new Date().toLocaleTimeString()}\x1b[0m]`;
 
-export async function resolverCaptcha(page, selectorImg, selectorInput) {
+export async function resolverCaptcha(page, selectorImg, selectorInput, io, reporteId) {
     if (!process.env.TWOCAPTCHA_KEY || process.env.TWOCAPTCHA_KEY === 'TU_CLAVE_DE_2CAPTCHA_AQUI') {
         console.warn(`${getTimestamp()} \x1b[33m[CAPTCHA]\x1b[0m ⚠️ Sin 2Captcha Key. Saltando resolución automática.`);
         return;
     }
+
+    const enviarEstado = (msg) => {
+        if (io) io.emit(`status_${reporteId}`, { msg, time: new Date().toLocaleTimeString() });
+    };
 
     try {
         await page.waitForSelector(selectorImg, { timeout: 10000 });
@@ -18,6 +22,7 @@ export async function resolverCaptcha(page, selectorImg, selectorInput) {
         const buffer = await elementoImg.screenshot();
         
         console.info(`${getTimestamp()} \x1b[35m[CAPTCHA]\x1b[0m 🤖 Enviando captcha a 2Captcha (${buffer.length} bytes)...`);
+        enviarEstado("Enviando captcha a 2Captcha...");
 
         const form = new FormData();
         form.append('key', process.env.TWOCAPTCHA_KEY);
@@ -31,6 +36,7 @@ export async function resolverCaptcha(page, selectorImg, selectorInput) {
 
         if (res.data.status !== 1) {
             console.error(`${getTimestamp()} \x1b[31m[ERROR]\x1b[0m ❌ Error de 2Captcha:`, res.data.request);
+            enviarEstado("Error al enviar captcha a resolver.");
             return;
         }
 
@@ -42,6 +48,7 @@ export async function resolverCaptcha(page, selectorImg, selectorInput) {
                 console.warn(`${getTimestamp()} \x1b[33m[CAPTCHA]\x1b[0m ⚠️ Navegador cerrado. Cancelando.`);
                 return false;
             }
+            enviarEstado(`Esperando respuesta de 2Captcha (intento ${i+1})...`);
             await new Promise(r => setTimeout(r, 2500));
             const consulta = await axios.get('https://2captcha.com/res.php', {
                 params: {
@@ -59,6 +66,7 @@ export async function resolverCaptcha(page, selectorImg, selectorInput) {
 
         if (respuesta) {
             console.info(`${getTimestamp()} \x1b[32m[CAPTCHA]\x1b[0m ✅ Captcha resuelto: \x1b[36m${respuesta}\x1b[0m`);
+            enviarEstado("¡Captcha resuelto con éxito!");
             await escribirHumano(page, selectorInput, respuesta);
             return true;
         }
@@ -70,11 +78,16 @@ export async function resolverCaptcha(page, selectorImg, selectorInput) {
     }
 }
 
-export async function resolverReCaptcha(page, siteKey, url) {
+export async function resolverReCaptcha(page, siteKey, url, io, reporteId) {
     if (!process.env.TWOCAPTCHA_KEY || process.env.TWOCAPTCHA_KEY === 'TU_CLAVE_DE_2CAPTCHA_AQUI') return false;
+
+    const enviarEstado = (msg) => {
+        if (io) io.emit(`status_${reporteId}`, { msg, time: new Date().toLocaleTimeString() });
+    };
 
     try {
         console.log('🤖 Solicitando resolución de reCAPTCHA a 2Captcha...');
+        enviarEstado("Enviando reCAPTCHA a 2Captcha...");
         
         const form = new FormData();
         form.append('key', process.env.TWOCAPTCHA_KEY);
@@ -89,17 +102,16 @@ export async function resolverReCaptcha(page, siteKey, url) {
 
         if (res.data.status !== 1) {
             console.error('❌ Error al enviar reCAPTCHA:', res.data.request);
+            enviarEstado("Error al conectar con 2Captcha.");
             return;
         }
 
         const taskId = res.data.request;
         let gResponse = '';
 
-        for (let i = 0; i < 45; i++) { // Aumentamos un poco el tiempo para reCAPTCHA
-            if (page.isClosed()) {
-                console.log('⚠️ Navegador cerrado. Cancelando reCAPTCHA.');
-                return false;
-            }
+        for (let i = 0; i < 60; i++) { 
+            if (page.isClosed()) return false;
+            enviarEstado(`Esperando respuesta de Google (intento ${i+1}/60)...`);
             await new Promise(r => setTimeout(r, 4000));
             const consulta = await axios.get('https://2captcha.com/res.php', {
                 params: {
@@ -113,28 +125,22 @@ export async function resolverReCaptcha(page, siteKey, url) {
                 gResponse = consulta.data.request;
                 break;
             }
-            if (consulta.data.request !== 'CAPCHA_NOT_READY') {
-                console.error('❌ Error en 2Captcha reCAPTCHA:', consulta.data.request);
-                break;
-            }
         }
 
         if (gResponse) {
             if (page.isClosed()) return false;
             console.log('✅ reCAPTCHA resuelto con 2Captcha.');
-            try {
-                await page.evaluate((token) => {
-                    const elements = document.getElementsByName('g-recaptcha-response');
-                    for (let el of elements) {
-                        el.value = token;
-                        el.innerHTML = token;
-                    }
-                }, gResponse);
-                return true;
-            } catch (evalError) {
-                console.log('⚠️ No se pudo inyectar el token (posible cierre de página).');
-                return false;
-            }
+            enviarEstado("reCAPTCHA resuelto. Aplicando...");
+            
+            await page.evaluate((token) => {
+                const elements = document.getElementsByName('g-recaptcha-response');
+                for (let el of elements) {
+                    el.value = token;
+                    el.innerHTML = token;
+                }
+            }, gResponse);
+            
+            return true;
         }
         return false;
     } catch (e) {

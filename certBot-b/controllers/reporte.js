@@ -30,6 +30,7 @@ export const crearReporte = async (req, res, next) => {
             ...datos,
             contratistaId,
             supervisorId,
+            pagina_bot: pagina, // CAMBIO: Guardamos el nombre de la plataforma
             estado_descarga: false
         });
 

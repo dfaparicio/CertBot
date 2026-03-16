@@ -35,10 +35,27 @@ export async function escribirHumano(page, selector, texto) {
     await page.type(selector, texto.toString(), { delay: Math.random() * (120 - 40) + 40 });
 }
 
-export const encolarReporte = (reporteId, pagina) => {
+const getTimestamp = () => `[\x1b[90m${new Date().toLocaleTimeString()}\x1b[0m]`;
+
+const enviarEstado = (io, reporteId, msg, error = false) => {
+    if (io) {
+        io.emit(`status_${reporteId}`, { msg, error, time: new Date().toLocaleTimeString() });
+    }
+};
+
+export const encolarReporte = (reporteId, pagina, io, intentos = 0) => {
     const taskKey = `${pagina}_${reporteId}`;
-    if (reportesEnProceso.has(taskKey)) return false;
-    colaTareas.push({ reporteId, pagina, taskKey });
+    
+    if (reportesEnProceso.has(taskKey) && intentos === 0) {
+        const tareaActual = colaTareas.find(t => t.taskKey === taskKey);
+        if (tareaActual) {
+            tareaActual.io = io;
+        }
+        enviarEstado(io, reporteId, "La tarea ya está en proceso, sincronizando...");
+        return true; 
+    }
+
+    colaTareas.push({ reporteId, pagina, taskKey, io, intentos });
     reportesEnProceso.add(taskKey);
     procesarCola();
     return true;
@@ -46,28 +63,39 @@ export const encolarReporte = (reporteId, pagina) => {
 
 export const ejecutarBot = async (req, res) => {
     const { reporteId, pagina } = req.body;
+    const io = req.io;
     if (!reporteId || !pagina) return res.status(400).json({ ok: false, msg: 'Faltan parámetros' });
-    const encolado = encolarReporte(reporteId, pagina);
+    const encolado = encolarReporte(reporteId, pagina, io);
     if (encolado) res.json({ ok: true, msg: 'Tarea añadida a la cola' });
     else res.json({ ok: true, msg: 'Ya en cola' });
 };
 
-const getTimestamp = () => `[\x1b[90m${new Date().toLocaleTimeString()}\x1b[0m]`;
-
 async function procesarCola() {
     if (botTrabajando || colaTareas.length === 0) return;
     botTrabajando = true;
-    const { reporteId, pagina, taskKey } = colaTareas.shift();
+    const { reporteId, pagina, taskKey, io, intentos } = colaTareas.shift();
     
-    console.group(`\n${getTimestamp()} \x1b[35m[PROCESS]\x1b[0m 🤖 Iniciando Automatización: ${pagina}`);
-    console.time(`⏱️ Tiempo total de ejecución`);
+    console.group(`\n${getTimestamp()} \x1b[35m[PROCESS]\x1b[0m 🤖 Automatización: ${pagina} (Intento ${intentos + 1}/3)`);
     
     try {
-        await procesarReporte(reporteId, pagina, taskKey);
+        await procesarReporte(reporteId, pagina, taskKey, io);
     } catch (err) {
-        console.error(`${getTimestamp()} \x1b[31m[ERROR]\x1b[0m ❌ Fallo en la cola:`, err.message);
+        console.error(`${getTimestamp()} \x1b[31m[ERROR]\x1b[0m ❌ Fallo en el intento ${intentos + 1}:`, err.message);
+        
+        if (intentos < 2) { // 3 intentos en total (0, 1, 2)
+            const waitTime = 5000;
+            enviarEstado(io, reporteId, `Error en intento ${intentos + 1}. Reintentando en ${waitTime/1000}s...`);
+            
+            setTimeout(() => {
+                reportesEnProceso.delete(taskKey);
+                encolarReporte(reporteId, pagina, io, intentos + 1);
+            }, waitTime);
+        } else {
+            enviarEstado(io, reporteId, "Se agotaron los reintentos. Verifique sus datos o el estado del portal.", true);
+            const Modelo = MODELOS[pagina];
+            if (Modelo) await Modelo.findByIdAndUpdate(reporteId, { estado: 'Rechazado' });
+        }
     } finally {
-        console.timeEnd(`⏱️ Tiempo total de ejecución`);
         console.groupEnd();
         botTrabajando = false;
         reportesEnProceso.delete(taskKey);
@@ -75,7 +103,7 @@ async function procesarCola() {
     }
 }
 
-const procesarReporte = async (reporteId, pagina, taskKey) => {
+const procesarReporte = async (reporteId, pagina, taskKey, io) => {
     const Modelo = MODELOS[pagina];
     if (!Modelo) return;
 
@@ -88,6 +116,7 @@ const procesarReporte = async (reporteId, pagina, taskKey) => {
 
         if (!reporte || reporte.estado_descarga) {
             console.warn(`${getTimestamp()} \x1b[33m[WARN]\x1b[0m Reporte ya procesado u omitido.`);
+            enviarEstado(io, reporteId, "El reporte ya fue procesado o no existe.");
             return;
         }
 
@@ -98,8 +127,11 @@ const procesarReporte = async (reporteId, pagina, taskKey) => {
         const nombreC = `${contratista.nombre} ${contratista.apellidos}`.trim();
         
         console.info(`${getTimestamp()} \x1b[34m[INFO]\x1b[0m Datos Clave: ${nombreC} (${docNum})`);
+        enviarEstado(io, reporteId, `Iniciando bot para ${nombreC}...`);
 
         browser = await chromium.launch({ headless: process.env.BOT_HEADLESS === 'true' });
+        enviarEstado(io, reporteId, "Navegador iniciado con éxito.");
+
         const context = await browser.newContext();
         const page = await context.newPage();
         
@@ -122,6 +154,7 @@ const procesarReporte = async (reporteId, pagina, taskKey) => {
 
         const manejarArchivo = async (fullPath, fileName) => {
             console.log(`🛠️ [DEBUG] Procesando archivo final: ${fileName} en ${fullPath}`);
+            enviarEstado(io, reporteId, `Archivo capturado: ${fileName}. Subiendo a Drive...`);
             try {
                 const docNum = contratista.numero_documento;
                 const nombre = (contratista.nombre || 'Sin').trim().replace(/\s+/g, '_');
@@ -133,8 +166,10 @@ const procesarReporte = async (reporteId, pagina, taskKey) => {
                 } else {
                     await manejarSubidaADrive(fullPath, fileName, reporte, contratista);
                 }
+                enviarEstado(io, reporteId, "¡Proceso finalizado con éxito! Archivo en Drive.");
             } catch (err) {
                 console.error(`❌ [DEBUG] Error en manejarArchivo: ${err.message}`);
+                enviarEstado(io, reporteId, "Error al subir el archivo a Drive.", true);
             } finally {
                 terminarSubida();
             }
@@ -142,6 +177,7 @@ const procesarReporte = async (reporteId, pagina, taskKey) => {
 
         context.on('download', async (download) => {
             console.log('📥 [DEBUG] Evento de descarga detectado en el navegador...');
+            enviarEstado(io, reporteId, "Descarga iniciada desde el portal...");
             const docNum = contratista.numero_documento;
             const nombre = (contratista.nombre || 'Sin').trim().replace(/\s+/g, '_');
             const apellido = (contratista.apellidos || 'Nombre').trim().replace(/\s+/g, '_');
@@ -197,13 +233,26 @@ const procesarReporte = async (reporteId, pagina, taskKey) => {
 
 
         switch (pagina) {
-            case 'Aportes en Línea': await automatizarAportesEnLinea(page, contratista, reporte); break;
-            case 'Mi Planilla': await automatizarMiPlanilla(page, contratista, reporte); break;
-            case 'SOI': await automatizarSOI(page, contratista, reporte, manejarArchivo); break;
-            case 'Asopagos': await automatizarAsopagos(page, contratista, reporte, manejarArchivo); break;
+            case 'Aportes en Línea': 
+                enviarEstado(io, reporteId, "Accediendo a Aportes en Línea...");
+                await automatizarAportesEnLinea(page, contratista, reporte, io, reporteId); 
+                break;
+            case 'Mi Planilla': 
+                enviarEstado(io, reporteId, "Accediendo a Mi Planilla...");
+                await automatizarMiPlanilla(page, contratista, reporte, io, reporteId); 
+                break;
+            case 'SOI': 
+                enviarEstado(io, reporteId, "Accediendo a SOI...");
+                await automatizarSOI(page, contratista, reporte, manejarArchivo, io, reporteId); 
+                break;
+            case 'Asopagos': 
+                enviarEstado(io, reporteId, "Accediendo a Asopagos...");
+                await automatizarAsopagos(page, contratista, reporte, manejarArchivo, io, reporteId); 
+                break;
         }
 
         await Promise.race([pendienteSubida, new Promise(r => setTimeout(r, 60000))]);
+        enviarEstado(io, reporteId, "¡Automatización finalizada con éxito!");
 
     } finally {
         if (browser) await browser.close();

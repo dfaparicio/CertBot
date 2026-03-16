@@ -14,7 +14,10 @@ router.post('/crear', crearReporte);
 router.put('/actualizar/:reporteId', actualizarReporte);
 
 // Ruta para disparar la automatización del bot
-router.post('/automatizar', ejecutarBot, (req, res) => {
+router.post('/automatizar', (req, res, next) => {
+    req.io = req.app.get('socketio');
+    next();
+}, ejecutarBot, (req, res) => {
     res.json(req.botResultado);
 });
 

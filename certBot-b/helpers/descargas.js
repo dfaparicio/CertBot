@@ -19,8 +19,13 @@ export const manejarSubidaADrive = async (fullPath, fileName, reporte, contratis
 
         await subirADrive(fullPath, fileName, supervisorName, mesNombre, anio);
         
+        // Actualizamos los campos directamente en el objeto reporte
         reporte.estado_descarga = true;
+        reporte.estado = 'Aprobado';
+        
+        // Guardamos los cambios
         await reporte.save();
+        
         console.info(`${getTimestamp()} \x1b[32m[SUCCESS]\x1b[0m ✅ Reporte subido y actualizado en Base de Datos.`);
     } catch (err) {
         console.error(`${getTimestamp()} \x1b[31m[ERROR]\x1b[0m ❌ Error en el proceso de subida:`, err.message);

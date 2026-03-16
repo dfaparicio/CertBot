@@ -6,13 +6,19 @@ import { convertirImagenAPDF, manejarSubidaADrive } from '../../helpers/descarga
 
 const getTimestamp = () => `[\x1b[90m${new Date().toLocaleTimeString()}\x1b[0m]`;
 
-export async function automatizarMiPlanilla(page, contratista, reporte) {
+export async function automatizarMiPlanilla(page, contratista, reporte, io, reporteId) {
+    const enviarEstado = (msg, error = false) => {
+        if (io) io.emit(`status_${reporteId}`, { msg, error, time: new Date().toLocaleTimeString() });
+    };
+
     try {
         console.info(`${getTimestamp()} \x1b[34m[BOT]\x1b[0m 🌐 Navegando a Mi Planilla...`);
+        enviarEstado("Navegando al portal de Mi Planilla...");
         await page.goto('https://www.miplanilla.com/Private/Consultaplanillaindependiente.aspx', { waitUntil: 'domcontentloaded' });
 
         const tipoIdValue = DOC_CODES['Mi Planilla'][contratista.tipo_documento] || 'CC';
         console.info(`${getTimestamp()} \x1b[34m[BOT]\x1b[0m 📝 Ingresando datos del contratista...`);
+        enviarEstado("Ingresando datos del contratista...");
         
         await page.selectOption('select#cp1_ddlTipoDocumento', tipoIdValue);
         await escribirHumano(page, 'input#cp1_txtNumeroDocumento', contratista.numero_documento);
@@ -38,10 +44,11 @@ export async function automatizarMiPlanilla(page, contratista, reporte) {
             await escribirHumano(page, 'input#cp1_txtValorPagado', reporte.valor_planilla.toString());
         }
 
-        const resuelto = await resolverCaptcha(page, 'img[src*="captchaImage.aspx"]', '#cp1_txtCaptcha');
+        const resuelto = await resolverCaptcha(page, 'img[src*="captchaImage.aspx"]', '#cp1_txtCaptcha', io, reporteId);
 
         if (resuelto) {
             console.info(`${getTimestamp()} \x1b[32m[SUCCESS]\x1b[0m ✅ Captcha resuelto, consultando...`);
+            enviarEstado("Captcha resuelto. Consultando reporte...");
             await page.click('#cp1_ButtonConsultar');
             
             await page.waitForTimeout(4000); 
@@ -58,26 +65,33 @@ export async function automatizarMiPlanilla(page, contratista, reporte) {
                 const fullPathPdf = path.join(downloadPath, fileNamePdf);
 
                 console.info(`${getTimestamp()} \x1b[35m[FILE]\x1b[0m 📸 Capturando evidencia visual...`);
+                enviarEstado("Capturando evidencia visual del pago...");
                 
                 const element = await page.$('#cp1_pnlResultado') || await page.$('.container') || await page.$('body');
                 const screenshotBuffer = await element.screenshot({ type: 'jpeg', quality: 80 });
 
                 console.info(`${getTimestamp()} \x1b[35m[FILE]\x1b[0m 📄 Convirtiendo captura a PDF...`);
+                enviarEstado("Convirtiendo evidencia a formato PDF...");
                 const exitoPdf = await convertirImagenAPDF(screenshotBuffer, fullPathPdf);
                 
                 if (exitoPdf) {
+                    enviarEstado("Subiendo evidencia a Google Drive...");
                     await manejarSubidaADrive(fullPathPdf, fileNamePdf, reporte, contratista);
+                    enviarEstado("¡Evidencia subida y reporte finalizado!", false);
                 }
 
             } catch (e) {
                 console.error(`${getTimestamp()} \x1b[31m[ERROR]\x1b[0m ❌ Error al procesar captura en Mi Planilla:`, e.message);
+                enviarEstado("Error al generar la evidencia visual.", true);
             }
 
         } else {
             console.error(`${getTimestamp()} \x1b[31m[ERROR]\x1b[0m ❌ No se pudo resolver el captcha.`);
+            enviarEstado("No se pudo resolver el captcha tras varios intentos.", true);
         }
     } catch (err) {
         console.error(`${getTimestamp()} \x1b[31m[ERROR]\x1b[0m ❌ Error en portal Mi Planilla:`, err.message);
+        enviarEstado("Error crítico en el portal de Mi Planilla.", true);
         throw err;
     }
 }

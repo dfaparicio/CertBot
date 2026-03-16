@@ -8,13 +8,13 @@ const MODELOS = {
     'Asopagos': Asopagos
 };
 
-export const iniciarDisparador = () => {
+let socketIo = null;
 
+export const iniciarDisparador = (io) => {
+    socketIo = io; // Guardamos el socket
     console.log('⏰ Disparador del Bot activado (Cada 1 minuto)');
 
-    // Ejecutar inmediatamente al iniciar y luego cada 1 min
     revisarReportesPendientes();
-
     setInterval(() => {
         revisarReportesPendientes();
     }, 1 * 60 * 1000);
@@ -31,8 +31,8 @@ const revisarReportesPendientes = async () => {
                 console.log(`📂 Encontrados ${pendientes.length} pendientes en ${nombrePagina}`);
 
                 for (const reporte of pendientes) {
-                    // Simplemente encolamos. La cola serializada se encarga del resto.
-                    encolarReporte(reporte._id.toString(), nombrePagina);
+                    // Ahora pasamos socketIo para que avise al frontend si alguien está escuchando
+                    encolarReporte(reporte._id.toString(), nombrePagina, socketIo);
                 }
             }
         }

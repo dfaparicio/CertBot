@@ -3,9 +3,14 @@ import { escribirHumano, DOC_CODES, esperarAleatorio } from '../../helpers/botUt
 
 const getTimestamp = () => `[\x1b[90m${new Date().toLocaleTimeString()}\x1b[0m]`;
 
-export async function automatizarSOI(page, contratista, reporte, manejarArchivo) {
+export async function automatizarSOI(page, contratista, reporte, manejarArchivo, io, reporteId) {
+    const enviarEstado = (msg, error = false) => {
+        if (io) io.emit(`status_${reporteId}`, { msg, error, time: new Date().toLocaleTimeString() });
+    };
+
     try {
         console.info(`${getTimestamp()} \x1b[34m[BOT]\x1b[0m 🌐 Navegando a portal SOI...`);
+        enviarEstado("Navegando al portal de SOI...");
         // Esperamos a que la página cargue completamente sus scripts
         await page.goto('https://servicio.nuevosoi.com.co/soi/certificadoAportesCotizante.do', { waitUntil: 'load' });
 
@@ -14,6 +19,7 @@ export async function automatizarSOI(page, contratista, reporte, manejarArchivo)
 
         const tipoIdValue = DOC_CODES['SOI'][contratista.tipo_documento] || '1';
         console.info(`${getTimestamp()} \x1b[34m[BOT]\x1b[0m 📝 Ingresando credenciales del contratista...`);
+        enviarEstado("Ingresando credenciales del contratista...");
         
         await page.selectOption('select#tipoDocumentoAportante', tipoIdValue);
         await page.waitForTimeout(1000); 
@@ -41,6 +47,7 @@ export async function automatizarSOI(page, contratista, reporte, manejarArchivo)
 
                 if (epsValue) {
                     console.info(`${getTimestamp()} \x1b[34m[BOT]\x1b[0m 📝 Seleccionando EPS: \x1b[36m${contratista.eps}\x1b[0m`);
+                    enviarEstado(`Seleccionando EPS: ${contratista.eps}...`);
                     await page.selectOption('select#administradoraSalud', epsValue);
                     await page.dispatchEvent('select#administradoraSalud', 'change');
                     await page.waitForTimeout(800);
@@ -54,6 +61,7 @@ export async function automatizarSOI(page, contratista, reporte, manejarArchivo)
         const ano = reporte.ano || new Date().getFullYear().toString();
 
         console.info(`${getTimestamp()} \x1b[34m[BOT]\x1b[0m 📅 Periodo: \x1b[36m${mes}/${ano}\x1b[0m`);
+        enviarEstado(`Configurando periodo: ${mes}/${ano}...`);
         await page.waitForSelector('select#periodoLiqSaludMes');
         await page.selectOption('select#periodoLiqSaludMes', parseInt(mes, 10).toString());
         
@@ -61,6 +69,7 @@ export async function automatizarSOI(page, contratista, reporte, manejarArchivo)
         await page.selectOption('select#periodoLiqSaludAnnio', ano.toString());
 
         console.info(`${getTimestamp()} \x1b[32m[SUCCESS]\x1b[0m ✅ Datos completados, iniciando descarga...`);
+        enviarEstado("Iniciando generación de descarga en SOI...");
         await page.waitForSelector('button.btn-success');
         
         // Iniciamos la escucha del evento ANTES del clic
@@ -71,6 +80,7 @@ export async function automatizarSOI(page, contratista, reporte, manejarArchivo)
         const download = await downloadPromise;
         if (download && manejarArchivo) {
             console.info(`${getTimestamp()} \x1b[35m[FILE]\x1b[0m 📥 Descarga capturada de SOI.`);
+            enviarEstado("Descarga capturada. Procesando archivo...");
             const suggestedFileName = download.suggestedFilename();
             const extension = suggestedFileName.split('.').pop() || 'zip';
             const fileName = `${contratista.nombre}_${contratista.apellidos}_${contratista.numero_documento}.${extension}`.replace(/\s+/g, '_');
@@ -79,9 +89,11 @@ export async function automatizarSOI(page, contratista, reporte, manejarArchivo)
             
             await download.saveAs(fullPath);
             await manejarArchivo(fullPath, fileName);
+            enviarEstado("¡Reporte de SOI procesado y subido!");
         }
     } catch (err) {
         console.error(`${getTimestamp()} \x1b[31m[ERROR]\x1b[0m ❌ Error en portal SOI:`, err.message);
+        enviarEstado("Error crítico en el portal de SOI.", true);
         throw err;
     }
 }

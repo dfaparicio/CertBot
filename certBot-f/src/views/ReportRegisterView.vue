@@ -125,19 +125,97 @@
 
                 </q-form>
               </AppCard>
+
+              <!-- SECCIÓN DE HISTORIAL DE REPORTES -->
+              <div class="q-mt-xl">
+                <div class="row items-center q-mb-md">
+                  <q-icon name="history" size="md" color="primary" class="q-mr-sm" />
+                  <div class="text-h5 text-weight-bold text-sena-navy">Historial de Mis Reportes</div>
+                  <q-space />
+                  <q-btn flat round icon="refresh" color="primary" @click="fetchMyReports" :loading="loadingHistory">
+                    <q-tooltip>Actualizar Historial</q-tooltip>
+                  </q-btn>
+                </div>
+
+                <q-table
+                  :rows="myReports"
+                  :columns="colReports"
+                  row-key="_id"
+                  :loading="loadingHistory"
+                  no-data-label="Aún no ha registrado reportes"
+                  class="no-shadow border-grey compact-table"
+                  :pagination="{ rowsPerPage: 5 }"
+                >
+                  <template v-slot:body-cell-estado="props">
+                    <q-td :props="props">
+                      <q-chip
+                        :color="getStatusColor(props.row.estado)"
+                        text-color="white"
+                        size="sm"
+                        class="text-weight-bold"
+                      >
+                        {{ props.row.estado || 'Pendiente' }}
+                      </q-chip>
+                    </q-td>
+                  </template>
+                </q-table>
+              </div>
+
             </div>
           </div>
         </div>
       </q-page>
     </q-page-container>
     <AppFooter />
+
+    <!-- DIÁLOGO DE PROGRESO DEL BOT -->
+    <q-dialog v-model="showBotDialog" persistent backdrop-filter="blur(4px)">
+      <q-card style="width: 500px; max-width: 90vw; border-radius: 16px;">
+        <q-card-section class="row items-center q-pb-none">
+          <div class="text-h6 text-sena-navy text-weight-bolder">Procesando Automatización</div>
+          <q-space />
+          <q-btn icon="close" flat round dense v-close-popup>
+            <q-tooltip>Ocultar y seguir en segundo plano</q-tooltip>
+          </q-btn>
+        </q-card-section>
+
+        <q-card-section class="text-center q-pa-xl">
+          <q-spinner-gears v-if="!botError && !botStatus.toLowerCase().includes('finaliza')" color="primary" size="80px" class="q-mb-md" />
+          <q-icon v-else-if="botError" name="error" color="red" size="80px" class="q-mb-md" />
+          <q-icon v-else name="check_circle" color="green" size="80px" class="q-mb-md" />
+          
+          <div :class="['text-h6 q-mt-md', botError ? 'text-red' : 'text-sena-navy']">
+            {{ botStatus }}
+          </div>
+          <p class="text-caption text-grey-7" v-if="!botStatus.toLowerCase().includes('finaliza')">
+            Puede ocultar esta ventana, el bot seguirá trabajando.
+          </p>
+        </q-card-section>
+
+        <q-card-section>
+          <div class="text-weight-bold q-mb-xs text-grey-9">Logs del Bot:</div>
+          <div class="bot-log-container shadow-1">
+            <div v-for="(log, index) in botLogs" :key="index" :class="['log-item', log.error ? 'log-error' : '']">
+              <span class="text-grey-6 text-caption">[{{ log.time }}]</span> {{ log.msg }}
+            </div>
+          </div>
+        </q-card-section>
+
+        <q-card-actions align="right" class="q-pa-md">
+          <q-btn outline label="Seguir en segundo plano" color="primary" v-close-popup v-if="!botStatus.toLowerCase().includes('finaliza')" />
+          <q-btn unelevated label="Entendido" color="primary" v-else v-close-popup />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
   </q-layout>
 </template>
 
 <script setup>
-import { reactive, ref, computed, onMounted } from 'vue'
+import { reactive, ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
+import { io } from 'socket.io-client'
 import { postData, getData } from '../services/api'
 import { useMainStore } from '../store/store'
 import AppHeader from '../components/AppHeader.vue'
@@ -151,23 +229,18 @@ const loading = ref(false)
 const loadingSupervisores = ref(false)
 const supervisores = ref([])
 
-const formatCurrency = (val) => {
-  return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(val)
-}
+// Estados para el Feedback del Bot
+const showBotDialog = ref(false)
+const botLogs = ref([])
+const botStatus = ref('Esperando al bot...')
+const botError = ref(false)
+let socket = null
 
-const getMesNombre = (mesVal) => {
-  const mes = meses.find(m => m.value === mesVal)
-  return mes ? mes.label.charAt(0) + mes.label.slice(1).toLowerCase() : ''
-}
+// Estados para el Historial
+const myReports = ref([])
+const loadingHistory = ref(false)
 
-// Opciones de plataforma
-const opcionesPlataforma = [
-  { label: 'Mi Planilla', value: 'Mi Planilla' },
-  { label: 'SOI', value: 'SOI' },
-  { label: 'Aportes en Línea', value: 'Aportes en Línea' },
-  { label: 'Asopagos', value: 'Asopagos' }
-]
-
+// Configuración del Formulario
 const formData = reactive({
   supervisorId: store.user?.supervisorId || '',
   pagina: '', 
@@ -185,14 +258,19 @@ const formData = reactive({
   ano_salud: new Date().getFullYear()
 })
 
+const opcionesPlataforma = [
+  { label: 'Mi Planilla', value: 'Mi Planilla' },
+  { label: 'SOI', value: 'SOI' },
+  { label: 'Aportes en Línea', value: 'Aportes en Línea' },
+  { label: 'Asopagos', value: 'Asopagos' }
+]
+
 const meses = Array.from({length: 12}, (_, i) => ({ 
   label: new Date(0, i).toLocaleString('es', {month: 'long'}).toUpperCase(), 
   value: String(i+1).padStart(2, '0') 
 }))
 
 const opUstedEs = [{label: 'Cotizante Activo', value: 0}, {label: 'Pensionado', value: 1}]
-const opCert = [{label: 'Seguridad Social', value: 0}, {label: 'Cesantías', value: 1}]
-const opRep = [{label: 'Sin Valores', value: 0}, {label: 'Con Valores', value: 1}]
 
 const supervisoresOptions = computed(() => {
   return supervisores.value.map(s => ({
@@ -200,6 +278,20 @@ const supervisoresOptions = computed(() => {
     value: s._id
   }))
 })
+
+const setupSocket = (reporteId) => {
+  socket = io('http://localhost:3000')
+  
+  socket.on(`status_${reporteId}`, (data) => {
+    botLogs.value.unshift(data)
+    botStatus.value = data.msg
+    botError.value = data.error
+    
+    if (data.error || data.msg.toLowerCase().includes('finaliza')) {
+      fetchMyReports()
+    }
+  })
+}
 
 const fetchSupervisores = async () => {
   loadingSupervisores.value = true
@@ -215,13 +307,51 @@ const fetchSupervisores = async () => {
   }
 }
 
+const fetchMyReports = async () => {
+  if (!store.user?._id) return
+  loadingHistory.value = true
+  try {
+    const res = await getData(`/reporte/supervisor/${store.user.supervisorId}`)
+    if (res.ok) {
+      myReports.value = res.reportes.filter(r => 
+        (r.contratistaId?._id === store.user._id) || (r.contratistaId === store.user._id)
+      )
+    }
+  } catch (error) {
+    console.error('Error cargando historial:', error)
+  } finally {
+    loadingHistory.value = false
+  }
+}
+
 onMounted(() => {
   fetchSupervisores()
+  fetchMyReports()
 })
+
+onUnmounted(() => {
+  if (socket) socket.disconnect()
+})
+
+const colReports = [
+  { name: 'fecha', label: 'FECHA REGISTRO', align: 'left', field: row => new Date(row.createdAt).toLocaleDateString() },
+  { name: 'pagina', label: 'PLATAFORMA', align: 'left', field: 'pagina_bot' },
+  { name: 'periodo', label: 'PERIODO', align: 'left', field: 'periodo_salud' },
+  { name: 'estado', label: 'ESTADO', align: 'center' }
+]
+
+const getStatusColor = (status) => {
+  switch (status) {
+    case 'Aprobado': return 'green-7'
+    case 'Rechazado': return 'red-7'
+    case 'Procesado': return 'blue-7'
+    default: return 'orange-8'
+  }
+}
 
 const submitReporte = async () => {
   if (!store.user?._id) {
-    $q.notify({ type: 'negative', message: 'Sesión expirada. Por favor inicie sesión.' })
+    $q.notify({ type: 'negative', message: 'Sesión expirada.' })
     router.push('/login')
     return
   }
@@ -234,62 +364,40 @@ const submitReporte = async () => {
       supervisorId: formData.supervisorId,
       pagina: formData.pagina,
       dia: Number(formData.dia),
-      // El bot usa 'ano' y 'mes_inicio' para el periodo de la planilla/salud
-      // Enviamos exactamente lo que el usuario seleccionó en la sección de Salud
       ano: Number(formData.ano_salud), 
       mes_inicio: formData.mes_salud,
       mes_final: formData.mes_salud,
       usted_es: Number(formData.usted_es),
       numero_planilla: formData.numero_planilla || 'N/A',
-      // La fecha de pago es informativa y se construye con los datos de la primera sección
       pago_planilla: new Date(formData.ano, Number(formData.mes_inicio) - 1, formData.dia),
-      // Formato MM/YYYY para Mi Planilla
       periodo_salud: `${formData.mes_salud}/${formData.ano_salud}`,
       valor_planilla: Number(formData.valor_planilla) || 0,
-      // Si es Asopagos, forzamos valores por defecto (Seguridad Social y Sin Valores)
       tipo_certificado: formData.pagina === 'Asopagos' ? 0 : Number(formData.tipo_certificado),
-      tipo_reporte: formData.pagina === 'Asopagos' ? 0 : Number(formData.tipo_reporte)
+      tipo_reporte: formData.pagina === 'Asopagos' ? 0 : Number(formData.tipo_reporte),
+      pagina_bot: formData.pagina
     }
 
-    // 1. Crear el reporte en la base de datos
     const res = await postData('/reporte/crear', payload)
     
     if (res.ok && res.reporte?._id) {
+      botLogs.value = []
+      botError.value = false
+      botStatus.value = 'Preparando entorno...'
+      showBotDialog.value = true
+      setupSocket(res.reporte._id)
       
-      // Actualizar el supervisor en el store del usuario para que se mantenga en la sesión
-      if (store.user) {
-        store.user.supervisorId = formData.supervisorId
-      }
+      fetchMyReports()
 
-      $q.notify({
-        type: 'positive',
-        message: '¡Reporte guardado! Iniciando automatización...',
-        position: 'top-right',
-        timeout: 2000
-      })
-
-      // 2. Disparar el Bot (Automatización)
-      const botRes = await postData('/reporte/automatizar', {
+      await postData('/reporte/automatizar', {
         reporteId: res.reporte._id,
         pagina: formData.pagina
       })
 
-      if (botRes.ok) {
-        $q.notify({
-          color: 'indigo-7',
-          icon: 'smart_toy',
-          message: 'El bot está procesando su solicitud en segundo plano.',
-          position: 'bottom-right',
-          timeout: 5000
-        })
-      }
-
-      // Limpiar formulario tras éxito completo
       formData.pagina = ''
       formData.valor_planilla = null
     }
   } catch (error) {
-    console.error('Error en el proceso de reporte:', error)
+    console.error('Error:', error)
     $q.notify({
       type: 'negative',
       message: error.response?.data?.msg || 'Error al conectar con el servidor',
@@ -303,4 +411,28 @@ const submitReporte = async () => {
 
 <style scoped>
 @import "../styles/report.css";
+
+.bot-log-container {
+  max-height: 200px;
+  overflow-y: auto;
+  border-radius: 8px;
+  background: #f8f9fa;
+  padding: 10px;
+  font-family: monospace;
+}
+.log-item {
+  margin-bottom: 5px;
+  font-size: 0.85rem;
+  border-left: 3px solid #ddd;
+  padding-left: 8px;
+}
+.log-error {
+  border-left-color: #f44336;
+  color: #d32f2f;
+}
+.compact-table :deep(thead tr th) {
+  background-color: #f8f9fa;
+  font-weight: 700;
+  color: var(--sena-navy);
+}
 </style>
