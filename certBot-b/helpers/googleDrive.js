@@ -17,6 +17,8 @@ oauth2Client.setCredentials({
 
 const drive = google.drive({ version: 'v3', auth: oauth2Client });
 
+const getTimestamp = () => `[\x1b[90m${new Date().toLocaleTimeString()}\x1b[0m]`;
+
 /**
  * Busca una carpeta por nombre dentro de un padre. Si no existe, la crea.
  */
@@ -34,7 +36,7 @@ const obtenerOCrearCarpeta = async (nombre, parentId) => {
             return res.data.files[0].id;
         }
 
-        // Si no existe, la creamos
+        console.info(`${getTimestamp()} \x1b[34m[DRIVE]\x1b[0m 📁 Creando carpeta: \x1b[36m${nombre}\x1b[0m`);
         const fileMetadata = {
             name: nombre,
             mimeType: 'application/vnd.google-apps.folder',
@@ -47,7 +49,7 @@ const obtenerOCrearCarpeta = async (nombre, parentId) => {
         });
         return folder.data.id;
     } catch (error) {
-        console.error(`Error buscando/creando carpeta ${nombre}:`, error.message);
+        console.error(`${getTimestamp()} \x1b[31m[ERROR]\x1b[0m ❌ Error en Drive (obtenerOCrearCarpeta):`, error.message);
         throw error;
     }
 };
@@ -65,10 +67,11 @@ export const subirADrive = async (filePath, fileName, supervisorName, mes, anio)
         // 2. Obtener o crear carpeta del Mes (ej: Enero)
         const mesId = await obtenerOCrearCarpeta(mes, anioId);
 
-        // 3. Obtener o crear carpeta del Supervisor (ej: Carlos_Perez_Rodriguez)
+        // 3. Obtener o crear carpeta del Supervisor
         const supervisorId = await obtenerOCrearCarpeta(supervisorName.replace(/ /g, '_'), mesId);
 
         // 4. Subir el archivo
+        console.info(`${getTimestamp()} \x1b[35m[DRIVE]\x1b[0m ☁️ Subiendo archivo a la nube...`);
         const fileMetadata = {
             name: fileName,
             parents: [supervisorId],
@@ -86,10 +89,10 @@ export const subirADrive = async (filePath, fileName, supervisorName, mes, anio)
             supportsAllDrives: true
         });
 
-        console.log(`✅ Archivo subido a Drive personales: ${fileName} en carpeta ${supervisorName}`);
+        console.info(`${getTimestamp()} \x1b[32m[SUCCESS]\x1b[0m ☁️ Archivo disponible en Drive: \x1b[36m${fileName}\x1b[0m`);
         return response.data;
     } catch (error) {
-        console.error('❌ Error subiendo a Google Drive PERSONAL:', error.message);
+        console.error(`${getTimestamp()} \x1b[31m[ERROR]\x1b[0m ❌ Fallo crítico en subida a Drive:`, error.message);
         throw error;
     }
 };

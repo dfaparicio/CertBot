@@ -12,11 +12,18 @@ export const DOC_CODES = {
 export const esperarAleatorio = (min = 500, max = 1500) =>
     new Promise(resolve => setTimeout(resolve, Math.floor(Math.random() * (max - min + 1) + min)));
 
+const getTimestamp = () => `[\x1b[90m${new Date().toLocaleTimeString()}\x1b[0m]`;
+
 /**
  * Escribe texto simulando pulsaciones de teclas humanas
  */
 export async function escribirHumano(page, selector, texto) {
     if (!texto) return;
-    await page.focus(selector);
-    await page.type(selector, texto.toString(), { delay: Math.random() * (120 - 40) + 40 });
+    try {
+        await page.focus(selector);
+        await page.type(selector, texto.toString(), { delay: Math.random() * (120 - 40) + 40 });
+        console.info(`${getTimestamp()} \x1b[34m[BOT]\x1b[0m ⌨️ Escribiendo: \x1b[36m${texto}\x1b[0m`);
+    } catch (e) {
+        console.warn(`${getTimestamp()} \x1b[33m[BOT]\x1b[0m ⚠️ No se pudo escribir en el selector: ${selector}`);
+    }
 }

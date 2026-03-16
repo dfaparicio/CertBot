@@ -2,21 +2,22 @@ import axios from 'axios';
 import FormData from 'form-data';
 import { escribirHumano } from '../middlewares/automatizacion.js';
 
+const getTimestamp = () => `[\x1b[90m${new Date().toLocaleTimeString()}\x1b[0m]`;
+
 export async function resolverCaptcha(page, selectorImg, selectorInput) {
     if (!process.env.TWOCAPTCHA_KEY || process.env.TWOCAPTCHA_KEY === 'TU_CLAVE_DE_2CAPTCHA_AQUI') {
-        console.log('⚠️ Sin 2Captcha Key. Saltando resolución automática.');
+        console.warn(`${getTimestamp()} \x1b[33m[CAPTCHA]\x1b[0m ⚠️ Sin 2Captcha Key. Saltando resolución automática.`);
         return;
     }
 
     try {
         await page.waitForSelector(selectorImg, { timeout: 10000 });
-        await page.waitForTimeout(1500); // Pequeña espera para asegurar que la imagen cargue
+        await page.waitForTimeout(1500); 
         const elementoImg = await page.$(selectorImg);
         
-        // Capturamos como buffer (archivo binario) para evitar problemas de base64
         const buffer = await elementoImg.screenshot();
         
-        console.log(`🤖 Enviando captcha a 2Captcha (${buffer.length} bytes)...`);
+        console.info(`${getTimestamp()} \x1b[35m[CAPTCHA]\x1b[0m 🤖 Enviando captcha a 2Captcha (${buffer.length} bytes)...`);
 
         const form = new FormData();
         form.append('key', process.env.TWOCAPTCHA_KEY);
@@ -29,7 +30,7 @@ export async function resolverCaptcha(page, selectorImg, selectorInput) {
         });
 
         if (res.data.status !== 1) {
-            console.error('❌ Error de 2Captcha:', res.data.request);
+            console.error(`${getTimestamp()} \x1b[31m[ERROR]\x1b[0m ❌ Error de 2Captcha:`, res.data.request);
             return;
         }
 
@@ -38,7 +39,7 @@ export async function resolverCaptcha(page, selectorImg, selectorInput) {
 
         for (let i = 0; i < 30; i++) {
             if (page.isClosed()) {
-                console.log('⚠️ Navegador cerrado por el usuario. Cancelando captcha.');
+                console.warn(`${getTimestamp()} \x1b[33m[CAPTCHA]\x1b[0m ⚠️ Navegador cerrado. Cancelando.`);
                 return false;
             }
             await new Promise(r => setTimeout(r, 2500));
@@ -54,22 +55,17 @@ export async function resolverCaptcha(page, selectorImg, selectorInput) {
                 respuesta = consulta.data.request;
                 break;
             }
-            if (consulta.data.request !== 'CAPCHA_NOT_READY') {
-                console.error('❌ Error en 2Captcha:', consulta.data.request);
-                break;
-            }
         }
 
         if (respuesta) {
-            if (page.isClosed()) return false;
-            console.log('🤖 Captcha Resuelto por 2Captcha:', respuesta);
+            console.info(`${getTimestamp()} \x1b[32m[CAPTCHA]\x1b[0m ✅ Captcha resuelto: \x1b[36m${respuesta}\x1b[0m`);
             await escribirHumano(page, selectorInput, respuesta);
             return true;
         }
         return false;
     } catch (e) {
         if (e.message.includes('closed')) return false;
-        console.error('❌ Fallo al resolver captcha:', e.message);
+        console.error(`${getTimestamp()} \x1b[31m[ERROR]\x1b[0m ❌ Fallo en captcha:`, e.message);
         return false;
     }
 }

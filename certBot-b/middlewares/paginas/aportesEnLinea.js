@@ -1,16 +1,18 @@
 import { escribirHumano, DOC_CODES, esperarAleatorio } from '../../helpers/botUtils.js';
 import { resolverReCaptcha } from '../../helpers/captcha.js';
 
+const getTimestamp = () => `[\x1b[90m${new Date().toLocaleTimeString()}\x1b[0m]`;
+
 export async function automatizarAportesEnLinea(page, contratista, reporte) {
     try {
-        console.log('Navegando a Aportes en Línea...');
+        console.info(`${getTimestamp()} \x1b[34m[BOT]\x1b[0m 🌐 Navegando a Aportes en Línea...`);
         await page.goto('https://empresas.aportesenlinea.com/Autoservicio/CertificadoAportes.aspx', { waitUntil: 'domcontentloaded' });
 
         await page.click('label[for="contenido_Pila"]');
         await esperarAleatorio(800, 1500);
 
         const tipoIdValue = DOC_CODES['Aportes en Línea'][contratista.tipo_documento] || '1';
-        console.log(`📝 Ingresando datos Aportes en Línea: ${contratista.numero_documento} (${tipoIdValue})`);
+        console.info(`${getTimestamp()} \x1b[34m[BOT]\x1b[0m 📝 Ingresando credenciales del contratista...`);
 
         try {
             await page.selectOption('select#contenido_ddlTipoIdent', { value: tipoIdValue, timeout: 3000 });
@@ -30,7 +32,6 @@ export async function automatizarAportesEnLinea(page, contratista, reporte) {
         }
 
         const anioStr = reporte.ano ? reporte.ano.toString() : new Date().getFullYear().toString();
-        console.log(`📝 Año: ${anioStr}`);
         await page.selectOption('select#contenido_ddlAnioIni', anioStr);
         await page.selectOption('select#contenido_ddlAnioFin', anioStr);
 
@@ -48,17 +49,16 @@ export async function automatizarAportesEnLinea(page, contratista, reporte) {
             await page.click('label[for="contenido_rdbPensionado"]');
         }
 
-        // Resolución de reCAPTCHA
         const resuelto = await resolverReCaptcha(page, '6Lc6FDMUAAAAAKwQX0_xF92Z1MiUXm4sYbQ6bh6J', page.url());
 
         if (resuelto) {
-            console.log('✅ reCAPTCHA superado, procediendo a descargar...');
+            console.info(`${getTimestamp()} \x1b[32m[SUCCESS]\x1b[0m ✅ reCAPTCHA superado, generando descarga...`);
             await page.click('#contenido_btnCalcular');
         } else {
-            console.error('❌ No se pudo resolver el reCAPTCHA en Aportes en Línea.');
+            console.error(`${getTimestamp()} \x1b[31m[ERROR]\x1b[0m ❌ No se pudo resolver el reCAPTCHA.`);
         }
     } catch (err) {
-        console.error('❌ Error en automatizarAportesEnLinea:', err.message);
+        console.error(`${getTimestamp()} \x1b[31m[ERROR]\x1b[0m ❌ Error en Aportes en Línea:`, err.message);
         throw err;
     }
 }

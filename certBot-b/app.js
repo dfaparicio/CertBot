@@ -24,6 +24,8 @@ app.use("/api/reporte", reporteRoute);
 
 const PORT = process.env.PORT || 3000;
 
+const getTimestamp = () => `[\x1b[90m${new Date().toLocaleTimeString()}\x1b[0m]`;
+
 app.listen(PORT, () => {
-    console.log(`🔥 Servidor escuchando en el puerto ${PORT}`);
+    console.info(`${getTimestamp()} \x1b[36m[INIT]\x1b[0m 🚀 Servidor Express iniciado con éxito en el puerto ${PORT}`);
 });

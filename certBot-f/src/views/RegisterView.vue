@@ -188,7 +188,7 @@ const formData = reactive({
 })
 
 const opcionesDocumento = [{ label: 'Cédula de Ciudadanía', value: 'CC' }, { label: 'Cédula de Extranjería', value: 'CE' }, { label: 'Pasaporte', value: 'PA' }]
-const opcionesEPS = [{ label: 'Sura', value: 'Sura' }, { label: 'Sanitas', value: 'Sanitas' }, { label: 'Compensar', value: 'Compensar' }, { label: 'Nueva EPS', value: 'Nueva EPS' }, { label: 'Salud Total', value: 'Salud Total' }, { label: 'Famisanar', value: 'Famisanar' }]
+const opcionesEPS = [{ label: 'Sura', value: 'Sura' }, { label: 'Sanitas', value: 'Sanitas' }, { label: 'Compensar', value: 'Compensar' }, { label: 'Nueva E.P.S', value: 'Nueva E.P.S' }, { label: 'Salud Total', value: 'Salud Total' }, { label: 'Famisanar', value: 'Famisanar' }]
 const opcionesAfiliado = [{ label: 'Cotizante', value: 'Cotizante' }, { label: 'Pensionado', value: 'Pensionado' }]
 
 const completarCorreo = (domain) => {

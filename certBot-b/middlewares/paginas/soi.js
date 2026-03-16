@@ -1,8 +1,11 @@
+import path from 'path';
 import { escribirHumano, DOC_CODES, esperarAleatorio } from '../../helpers/botUtils.js';
 
-export async function automatizarSOI(page, contratista, reporte) {
+const getTimestamp = () => `[\x1b[90m${new Date().toLocaleTimeString()}\x1b[0m]`;
+
+export async function automatizarSOI(page, contratista, reporte, manejarArchivo) {
     try {
-        console.log('Navegando a SOI...');
+        console.info(`${getTimestamp()} \x1b[34m[BOT]\x1b[0m 🌐 Navegando a portal SOI...`);
         // Esperamos a que la página cargue completamente sus scripts
         await page.goto('https://servicio.nuevosoi.com.co/soi/certificadoAportesCotizante.do', { waitUntil: 'load' });
 
@@ -10,16 +13,16 @@ export async function automatizarSOI(page, contratista, reporte) {
         await page.waitForSelector('select#tipoDocumentoAportante', { timeout: 10000 });
 
         const tipoIdValue = DOC_CODES['SOI'][contratista.tipo_documento] || '1';
-        console.log(`📝 Ingresando datos SOI: ${contratista.numero_documento} (${tipoIdValue})`);
+        console.info(`${getTimestamp()} \x1b[34m[BOT]\x1b[0m 📝 Ingresando credenciales del contratista...`);
         
         await page.selectOption('select#tipoDocumentoAportante', tipoIdValue);
-        await page.waitForTimeout(800); // Pausa para evitar error 'limpiarFormulario'
+        await page.waitForTimeout(1000); 
         
         await page.waitForSelector('input[name="numeroDocumentoAportante"]');
         await escribirHumano(page, 'input[name="numeroDocumentoAportante"]', contratista.numero_documento);
 
         await page.selectOption('select#tipoDocumentoCotizante', tipoIdValue);
-        await page.waitForTimeout(800);
+        await page.waitForTimeout(1000);
         
         await page.waitForSelector('input#numeroDocumentoCotizante');
         await escribirHumano(page, 'input#numeroDocumentoCotizante', contratista.numero_documento);
@@ -37,31 +40,48 @@ export async function automatizarSOI(page, contratista, reporte) {
                 }, contratista.eps);
 
                 if (epsValue) {
-                    console.log(`📝 Seleccionando EPS: ${contratista.eps}`);
+                    console.info(`${getTimestamp()} \x1b[34m[BOT]\x1b[0m 📝 Seleccionando EPS: \x1b[36m${contratista.eps}\x1b[0m`);
                     await page.selectOption('select#administradoraSalud', epsValue);
                     await page.dispatchEvent('select#administradoraSalud', 'change');
-                    await page.waitForTimeout(500);
+                    await page.waitForTimeout(800);
                 }
             } catch (e) {
-                console.log(`Aviso: Selector de EPS no disponible o error: ${e.message}`);
+                console.warn(`${getTimestamp()} \x1b[33m[BOT]\x1b[0m ⚠️ Selector de EPS no disponible.`);
             }
         }
 
         const mes = reporte.mes_inicio || (new Date().getMonth() + 1).toString();
         const ano = reporte.ano || new Date().getFullYear().toString();
 
-        console.log(`📝 Periodo: ${mes}/${ano}`);
+        console.info(`${getTimestamp()} \x1b[34m[BOT]\x1b[0m 📅 Periodo: \x1b[36m${mes}/${ano}\x1b[0m`);
         await page.waitForSelector('select#periodoLiqSaludMes');
         await page.selectOption('select#periodoLiqSaludMes', parseInt(mes, 10).toString());
         
         await page.waitForSelector('select#periodoLiqSaludAnnio');
         await page.selectOption('select#periodoLiqSaludAnnio', ano.toString());
 
-        console.log('✅ Procediendo a descargar en SOI...');
+        console.info(`${getTimestamp()} \x1b[32m[SUCCESS]\x1b[0m ✅ Datos completados, iniciando descarga...`);
         await page.waitForSelector('button.btn-success');
+        
+        // Iniciamos la escucha del evento ANTES del clic
+        const downloadPromise = page.waitForEvent('download', { timeout: 45000 }).catch(() => null);
+        
         await page.click('button.btn-success');
+
+        const download = await downloadPromise;
+        if (download && manejarArchivo) {
+            console.info(`${getTimestamp()} \x1b[35m[FILE]\x1b[0m 📥 Descarga capturada de SOI.`);
+            const suggestedFileName = download.suggestedFilename();
+            const extension = suggestedFileName.split('.').pop() || 'zip';
+            const fileName = `${contratista.nombre}_${contratista.apellidos}_${contratista.numero_documento}.${extension}`.replace(/\s+/g, '_');
+            const downloadPath = path.join(process.cwd(), 'descargas');
+            const fullPath = path.join(downloadPath, fileName);
+            
+            await download.saveAs(fullPath);
+            await manejarArchivo(fullPath, fileName);
+        }
     } catch (err) {
-        console.error('❌ Error en automatizarSOI:', err.message);
+        console.error(`${getTimestamp()} \x1b[31m[ERROR]\x1b[0m ❌ Error en portal SOI:`, err.message);
         throw err;
     }
 }
