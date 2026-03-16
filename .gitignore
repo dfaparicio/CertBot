@@ -19,3 +19,6 @@ yarn-error.log*
 # Credenciales de Google
 google-credentials.json
 certBot-b/google-credentials.json
+
+# Archivos Drive
+certBot-b/descargas/
