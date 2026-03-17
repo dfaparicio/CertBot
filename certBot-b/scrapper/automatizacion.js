@@ -7,6 +7,7 @@ import { automatizarMiPlanilla } from './paginas/miPlanilla.js';
 import { automatizarSOI } from './paginas/soi.js';
 import { automatizarAsopagos } from './paginas/asopagos.js';
 import { manejarSubidaADrive, procesarZip } from '../helpers/descargas.js';
+import { esperarAleatorio } from '../helpers/botUtils.js';
 
 const MODELOS = {
     'Mi Planilla': MiPlanilla,
@@ -90,8 +91,15 @@ async function procesarCola() {
         }
     } finally {
         console.groupEnd();
-        botTrabajando = false;
         reportesEnProceso.delete(taskKey);
+
+        // Si hay más tareas en la cola, esperamos entre 30 y 45 segundos
+        if (colaTareas.length > 0) {
+            console.info(`${getTimestamp()} \x1b[33m[WAIT]\x1b[0m ⏳ Aplicando pausa aleatoria (30-45s) antes de la siguiente página...`);
+            await esperarAleatorio(30000, 45000);
+        }
+
+        botTrabajando = false;
         procesarCola();
     }
 }
