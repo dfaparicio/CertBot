@@ -16,7 +16,7 @@ export const iniciarDisparador = (io) => {
     console.log('⏰ Programación del Bot activada (Diariamente a las 2:00 AM)');
 
     // Programar la tarea para las 2:00 AM todos los días
-    cron.schedule('0 2 * * *', () => {
+    cron.schedule('23 22 * * *', () => {
         console.log('🚀 Iniciando ejecución programada de las 2:00 AM...');
         revisarReportesPendientes();
     });
@@ -43,3 +43,4 @@ const revisarReportesPendientes = async () => {
     }
 };
 
+   

@@ -93,9 +93,8 @@ async function procesarCola() {
         console.groupEnd();
         reportesEnProceso.delete(taskKey);
 
-        // Si hay más tareas, esperamos de 30 a 45 segundos según la solicitud del usuario "entre pagina y pagina"
+        // Si hay más tareas en la cola, esperamos entre 30 y 45 segundos
         if (colaTareas.length > 0) {
-            // Calculamos un estimado solo para el log, esperarAleatorio hará el cálculo real
             console.info(`${getTimestamp()} \x1b[33m[WAIT]\x1b[0m ⏳ Aplicando pausa aleatoria (30-45s) antes de la siguiente página...`);
             await esperarAleatorio(30000, 45000);
         }
@@ -151,32 +150,61 @@ const procesarReporte = async (reporteId, pagina, taskKey, io) => {
             }
         });
 
-        const archivosCapturados = [];
+        let terminarSubida;
+        const pendienteSubida = new Promise(resolve => terminarSubida = resolve);
+
         const manejarArchivo = async (fullPath, fileName) => {
-            console.log(`📋 [BOT] Registrando archivo para procesamiento diferido: ${fileName}`);
-            archivosCapturados.push({ fullPath, fileName });
+            console.log(`🛠️ [DEBUG] Procesando archivo final: ${fileName} en ${fullPath}`);
+            enviarEstado(io, reporteId, `Archivo capturado: ${fileName}. Subiendo a Drive...`);
+            try {
+                const docNum = contratista.numero_documento;
+                const nombre = (contratista.nombre || 'Sin').trim().replace(/\s+/g, '_');
+                const apellido = (contratista.apellidos || 'Nombre').trim().replace(/\s+/g, '_');
+                const nombreLimpio = `${nombre}_${apellido}`;
+
+                if (fileName.toLowerCase().endsWith('.zip')) {
+                    await procesarZip(fullPath, fileName, downloadPath, nombreLimpio, docNum, reporte, contratista);
+                } else {
+                    await manejarSubidaADrive(fullPath, fileName, reporte, contratista);
+                }
+                enviarEstado(io, reporteId, "¡Proceso finalizado con éxito! Archivo en Drive.");
+            } catch (err) {
+                console.error(`❌ [DEBUG] Error en manejarArchivo: ${err.message}`);
+                enviarEstado(io, reporteId, "Error al subir el archivo a Drive.", true);
+            } finally {
+                terminarSubida();
+            }
         };
 
-        // Listeners centrales ajustados para NO procesar inmediatamente
         context.on('download', async (download) => {
-            console.log('📥 [DEBUG] Descarga detectada, guardando temporalmente...');
+            console.log('📥 [DEBUG] Evento de descarga detectado en el navegador...');
+            enviarEstado(io, reporteId, "Descarga iniciada desde el portal...");
             const docNum = contratista.numero_documento;
             const nombre = (contratista.nombre || 'Sin').trim().replace(/\s+/g, '_');
             const apellido = (contratista.apellidos || 'Nombre').trim().replace(/\s+/g, '_');
 
             const suggestedFileName = download.suggestedFilename();
+            console.log(`📄 [DEBUG] Archivo sugerido por el portal: ${suggestedFileName}`);
+
             const extension = suggestedFileName.split('.').pop() || 'pdf';
             const fileName = `${nombre}_${apellido}_${docNum}.${extension}`;
             const fullPath = path.join(downloadPath, fileName);
 
+            console.log(`💾 [DEBUG] Guardando archivo en disco: ${fullPath}`);
             await download.saveAs(fullPath);
+
             if (fs.existsSync(fullPath)) {
+                console.log('✅ [DEBUG] Archivo guardado correctamente. Iniciando manejarArchivo...');
                 await manejarArchivo(fullPath, fileName);
+            } else {
+                console.error('❌ [DEBUG] ERROR CRÍTICO: El archivo no se encontró en el disco tras saveAs');
             }
         });
 
         context.on('page', async (newPage) => {
-            console.log(`✨ [DEBUG] Nueva ventana detectada.`);
+            console.log(`✨ [DEBUG] Nueva ventana detectada: ${newPage.url()}`);
+
+            // Esperamos un momento para ver si la nueva página es una descarga
             const response = await newPage.waitForResponse(res => {
                 const isPdf = res.url().toLowerCase().endsWith('.pdf') || res.headers()['content-type']?.includes('application/pdf');
                 const isZip = res.url().toLowerCase().endsWith('.zip') || res.headers()['content-type']?.includes('application/zip') || res.headers()['content-type']?.includes('application/x-zip-compressed');
@@ -184,9 +212,11 @@ const procesarReporte = async (reporteId, pagina, taskKey, io) => {
             }, { timeout: 15000 }).catch(() => null);
 
             if (response) {
+                console.log(`✅ [DEBUG] Respuesta detectada en nueva ventana: ${response.url()} (Tipo: ${response.headers()['content-type']})`);
                 const docNum = contratista.numero_documento;
                 const nombre = (contratista.nombre || 'Sin').trim().replace(/\s+/g, '_');
                 const apellido = (contratista.apellidos || 'Nombre').trim().replace(/\s+/g, '_');
+
                 const isZip = response.url().toLowerCase().endsWith('.zip') || response.headers()['content-type']?.includes('zip');
                 const extension = isZip ? 'zip' : 'pdf';
                 const suffix = isZip ? '' : '_V';
@@ -194,13 +224,15 @@ const procesarReporte = async (reporteId, pagina, taskKey, io) => {
                 const fileName = `${nombre}_${apellido}_${docNum}${suffix}.${extension}`;
                 const fullPath = path.join(downloadPath, fileName);
 
+                console.log(`💾 [DEBUG] Guardando archivo desde flujo de red: ${fileName}`);
                 fs.writeFileSync(fullPath, await response.body());
                 await manejarArchivo(fullPath, fileName);
-                await newPage.close().catch(() => {});
+            } else {
+                console.log('⚠️ [DEBUG] La nueva ventana no cargó un PDF o ZIP en 15 segundos.');
             }
         });
 
-        // Ejecutar la automatización según el portal
+
         switch (pagina) {
             case 'Aportes en Línea':
                 enviarEstado(io, reporteId, "Accediendo a Aportes en Línea...");
@@ -208,7 +240,7 @@ const procesarReporte = async (reporteId, pagina, taskKey, io) => {
                 break;
             case 'Mi Planilla':
                 enviarEstado(io, reporteId, "Accediendo a Mi Planilla...");
-                await automatizarMiPlanilla(page, contratista, reporte, manejarArchivo, io, reporteId);
+                await automatizarMiPlanilla(page, contratista, reporte, io, reporteId);
                 break;
             case 'SOI':
                 enviarEstado(io, reporteId, "Accediendo a SOI...");
@@ -220,45 +252,9 @@ const procesarReporte = async (reporteId, pagina, taskKey, io) => {
                 break;
         }
 
-        // Si llegamos aquí sin errores, procesamos lo capturado
-        if (archivosCapturados.length > 0) {
-            enviarEstado(io, reporteId, "Portal finalizado con éxito. Procesando archivos capturados...");
-            for (const item of archivosCapturados) {
-                if (item.fileName.toLowerCase().endsWith('.zip')) {
-                    const docNum = contratista.numero_documento;
-                    const nombre = (contratista.nombre || 'Sin').trim().replace(/\s+/g, '_');
-                    const apellido = (contratista.apellidos || 'Nombre').trim().replace(/\s+/g, '_');
-                    const nombreLimpio = `${nombre}_${apellido}`;
-                    await procesarZip(item.fullPath, item.fileName, downloadPath, nombreLimpio, docNum, reporte, contratista, false);
-                } else {
-                    await manejarSubidaADrive(item.fullPath, item.fileName, reporte, contratista, false);
-                }
-            }
+        await Promise.race([pendienteSubida, new Promise(r => setTimeout(r, 60000))]);
+        enviarEstado(io, reporteId, "¡Automatización finalizada con éxito!");
 
-            // Marcamos como finalizado en una única operación atómica al final
-            reporte.estado_descarga = true;
-            reporte.estado = 'Aprobado';
-            await reporte.save();
-            enviarEstado(io, reporteId, "¡Automatización y subida finalizada con éxito!");
-        } else {
-            console.warn(`${getTimestamp()} \x1b[33m[WARN]\x1b[0m La automatización terminó pero no se capturó ningún archivo.`);
-            enviarEstado(io, reporteId, "No se detectaron archivos de certificados tras la consulta.", true);
-            throw new Error("No se capturó ningún archivo");
-        }
-
-    } catch (err) {
-        // En caso de error, limpiar archivos temporales si existen para evitar basura
-        console.error(`${getTimestamp()} \x1b[31m[ERROR]\x1b[0m Error en proceso: ${err.message}`);
-        
-        // El usuario pidió que si hay error no se descargue nada (borramos lo que se capturó a medias)
-        for (const item of archivosCapturados) {
-            try {
-                if (fs.existsSync(item.fullPath)) fs.unlinkSync(item.fullPath);
-                console.log(`🧹 [CLEANUP] Archivo eliminado por error en el proceso: ${item.fileName}`);
-            } catch (e) {}
-        }
-
-        throw err;
     } finally {
         if (browser) await browser.close();
     }
