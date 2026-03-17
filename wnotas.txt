@@ -8,3 +8,12 @@
   │ Contratista 3 │ luis.gonzalez@correo.com  │ 123456     │ 79794241   │
   │ Contratista 4 │ miguel.dulcey@correo.com  │ 123456     │ 91075655   │
   └───────────────┴───────────────────────────┴────────────┴────────────┘
+
+   Pero entonces con lo que hiciste se pierde la validacion de si llega a ocurrir un error, y alcanaza hacer la descarga no      
+   la haga, o como me podrias ayudar con eso, como esta en las 4 planillas para corregir porque sabes que esa validacion es      
+   muy importante  
+
+
+
+   Aportes en Linea 🆗
+   

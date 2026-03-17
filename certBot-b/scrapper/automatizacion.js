@@ -139,6 +139,10 @@ const procesarReporte = async (reporteId, pagina, taskKey, io) => {
         const downloadPath = path.join(process.cwd(), 'descargas');
         if (!fs.existsSync(downloadPath)) fs.mkdirSync(downloadPath, { recursive: true });
 
+        // Estado de validación para descargas
+        let descargaPermitida = false;
+        const permitirDescarga = () => { descargaPermitida = true; };
+
         // Escucha de respuestas (Logs profesionales)
         page.on('response', (res) => {
             const url = res.url();
@@ -154,6 +158,11 @@ const procesarReporte = async (reporteId, pagina, taskKey, io) => {
         const pendienteSubida = new Promise(resolve => terminarSubida = resolve);
 
         const manejarArchivo = async (fullPath, fileName) => {
+            if (!descargaPermitida) {
+                console.warn(`⚠️ [WARN] Intento de descarga bloqueado: ${fileName}. El bot detectó un estado no válido en el portal.`);
+                try { fs.unlinkSync(fullPath); } catch (e) {}
+                return;
+            }
             console.log(`🛠️ [DEBUG] Procesando archivo final: ${fileName} en ${fullPath}`);
             enviarEstado(io, reporteId, `Archivo capturado: ${fileName}. Subiendo a Drive...`);
             try {
@@ -163,9 +172,9 @@ const procesarReporte = async (reporteId, pagina, taskKey, io) => {
                 const nombreLimpio = `${nombre}_${apellido}`;
 
                 if (fileName.toLowerCase().endsWith('.zip')) {
-                    await procesarZip(fullPath, fileName, downloadPath, nombreLimpio, docNum, reporte, contratista);
+                    await procesarZip(fullPath, fileName, downloadPath, nombreLimpio, docNum, reporte, contratista, true);
                 } else {
-                    await manejarSubidaADrive(fullPath, fileName, reporte, contratista);
+                    await manejarSubidaADrive(fullPath, fileName, reporte, contratista, true);
                 }
                 enviarEstado(io, reporteId, "¡Proceso finalizado con éxito! Archivo en Drive.");
             } catch (err) {
@@ -236,19 +245,19 @@ const procesarReporte = async (reporteId, pagina, taskKey, io) => {
         switch (pagina) {
             case 'Aportes en Línea':
                 enviarEstado(io, reporteId, "Accediendo a Aportes en Línea...");
-                await automatizarAportesEnLinea(page, contratista, reporte, io, reporteId);
+                await automatizarAportesEnLinea(page, contratista, reporte, io, reporteId, permitirDescarga);
                 break;
             case 'Mi Planilla':
                 enviarEstado(io, reporteId, "Accediendo a Mi Planilla...");
-                await automatizarMiPlanilla(page, contratista, reporte, io, reporteId);
+                await automatizarMiPlanilla(page, contratista, reporte, manejarArchivo, io, reporteId, permitirDescarga);
                 break;
             case 'SOI':
                 enviarEstado(io, reporteId, "Accediendo a SOI...");
-                await automatizarSOI(page, contratista, reporte, manejarArchivo, io, reporteId);
+                await automatizarSOI(page, contratista, reporte, manejarArchivo, io, reporteId, permitirDescarga);
                 break;
             case 'Asopagos':
                 enviarEstado(io, reporteId, "Accediendo a Asopagos...");
-                await automatizarAsopagos(page, contratista, reporte, manejarArchivo, io, reporteId);
+                await automatizarAsopagos(page, contratista, reporte, manejarArchivo, io, reporteId, permitirDescarga);
                 break;
         }
 

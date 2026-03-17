@@ -6,7 +6,7 @@ import { convertirImagenAPDF, manejarSubidaADrive } from '../../helpers/descarga
 
 const getTimestamp = () => `[\x1b[90m${new Date().toLocaleTimeString()}\x1b[0m]`;
 
-export async function automatizarMiPlanilla(page, contratista, reporte, manejarArchivo, io, reporteId) {
+export async function automatizarMiPlanilla(page, contratista, reporte, manejarArchivo, io, reporteId, permitirDescarga) {
     const enviarEstado = (msg, error = false) => {
         if (io) io.emit(`status_${reporteId}`, { msg, error, time: new Date().toLocaleTimeString() });
     };
@@ -52,6 +52,21 @@ export async function automatizarMiPlanilla(page, contratista, reporte, manejarA
             await page.click('#cp1_ButtonConsultar');
             
             await page.waitForTimeout(4000); 
+
+            // --- VALIDACIÓN DE ERROR TRAS CONSULTA ---
+            const errorVisible = await page.evaluate(() => {
+                const bodyText = document.body.innerText.toLowerCase();
+                return bodyText.includes('error') || bodyText.includes('incorrecto') || bodyText.includes('no existe') || bodyText.includes('no se encontró');
+            });
+
+            if (errorVisible) {
+                console.error(`${getTimestamp()} \x1b[31m[ERROR]\x1b[0m ❌ Se detectó un error en Mi Planilla.`);
+                enviarEstado("Error detectado en el portal. Cancelando evidencia.", true);
+                throw new Error("Error detectado en el portal tras consulta");
+            }
+
+            // Si llegamos aquí, permitimos la descarga/captura
+            if (permitirDescarga) permitirDescarga();
 
             try {
                 const docNum = contratista.numero_documento;

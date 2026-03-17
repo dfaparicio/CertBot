@@ -52,40 +52,60 @@ export const manejarSubidaADrive = async (fullPath, fileName, reporte, contratis
  */
 export const procesarZip = async (fullPath, fileName, downloadPath, nombreLimpio, docNum, reporte, contratista, actualizarEstado = false) => {
     console.info(`${getTimestamp()} \x1b[35m[FILE]\x1b[0m 📦 Descomprimiendo archivo ZIP: \x1b[36m${fileName}\x1b[0m`);
-    const zip = new AdmZip(fullPath);
-    const zipEntries = zip.getEntries();
     
-    for (const zipEntry of zipEntries) {
-        if (!zipEntry.isDirectory) {
-            const entryName = zipEntry.entryName;
-            const baseName = path.basename(entryName);
-            const extractionPath = path.join(downloadPath, baseName);
-            
-            zip.extractEntryTo(zipEntry, downloadPath, false, true);
-            console.info(`${getTimestamp()} \x1b[34m[FILE]\x1b[0m 📄 Extraído: ${baseName}`);
-            
-            const fileExt = baseName.split('.').pop().toLowerCase();
-            if (fileExt !== 'pdf') continue;
+    try {
+        const zip = new AdmZip(fullPath);
+        const zipEntries = zip.getEntries();
+        
+        for (const zipEntry of zipEntries) {
+            if (!zipEntry.isDirectory) {
+                const entryName = zipEntry.entryName;
+                const baseName = path.basename(entryName);
+                
+                // Extraer el archivo individualmente. 
+                // El tercer parámetro 'false' hace que no mantenga la estructura de carpetas interna,
+                // dejando el archivo directamente en downloadPath.
+                zip.extractEntryTo(zipEntry, downloadPath, false, true);
+                
+                const extractionPath = path.join(downloadPath, baseName);
+                console.info(`${getTimestamp()} \x1b[34m[FILE]\x1b[0m 📄 Procesado desde ZIP: ${baseName}`);
+                
+                const fileExt = baseName.split('.').pop().toLowerCase();
+                if (fileExt !== 'pdf') {
+                    // Si no es PDF, lo borramos tras extraerlo si no nos sirve
+                    if (fs.existsSync(extractionPath)) try { fs.unlinkSync(extractionPath); } catch(e) {}
+                    continue;
+                }
 
-            const finalFileName = `${nombreLimpio}_${docNum}.${fileExt}`;
-            const finalFullPath = path.join(downloadPath, finalFileName);
+                const finalFileName = `${nombreLimpio}_${docNum}.${fileExt}`;
+                const finalFullPath = path.join(downloadPath, finalFileName);
 
-            let actualFinalFileName = finalFileName;
-            let actualFinalFullPath = finalFullPath;
+                let actualFinalFileName = finalFileName;
+                let actualFinalFullPath = finalFullPath;
 
-            if (fs.existsSync(finalFullPath)) {
-                actualFinalFileName = `${nombreLimpio}_${docNum}_V.${fileExt}`;
-                actualFinalFullPath = path.join(downloadPath, actualFinalFileName);
-            }
+                // Evitar colisiones si hay varios PDFs (aunque SOI suele traer uno solo)
+                if (fs.existsSync(finalFullPath)) {
+                    actualFinalFileName = `${nombreLimpio}_${docNum}_V.${fileExt}`;
+                    actualFinalFullPath = path.join(downloadPath, actualFinalFileName);
+                }
 
-            if (fs.existsSync(extractionPath)) {
-                fs.renameSync(extractionPath, actualFinalFullPath);
-                await manejarSubidaADrive(actualFinalFullPath, actualFinalFileName, reporte, contratista, actualizarEstado);
+                if (fs.existsSync(extractionPath)) {
+                    fs.renameSync(extractionPath, actualFinalFullPath);
+                    console.info(`${getTimestamp()} \x1b[32m[FILE]\x1b[0m ✅ PDF extraído y renombrado: ${actualFinalFileName}`);
+                    await manejarSubidaADrive(actualFinalFullPath, actualFinalFileName, reporte, contratista, actualizarEstado);
+                }
             }
         }
+        
+        // Limpiar el ZIP original
+        if (fs.existsSync(fullPath)) {
+            try { fs.unlinkSync(fullPath); } catch (e) {}
+            console.info(`${getTimestamp()} \x1b[34m[FILE]\x1b[0m 🗑️ Archivo ZIP original eliminado.`);
+        }
+    } catch (err) {
+        console.error(`${getTimestamp()} \x1b[31m[ERROR]\x1b[0m ❌ Error al procesar el ZIP:`, err.message);
+        throw err;
     }
-    
-    try { fs.unlinkSync(fullPath); } catch (e) {}
 };
 
 /**

@@ -3,7 +3,7 @@ import { resolverReCaptcha } from '../../helpers/captcha.js';
 
 const getTimestamp = () => `[\x1b[90m${new Date().toLocaleTimeString()}\x1b[0m]`;
 
-export async function automatizarAportesEnLinea(page, contratista, reporte, io, reporteId) {
+export async function automatizarAportesEnLinea(page, contratista, reporte, io, reporteId, permitirDescarga) {
     const enviarEstado = (msg, error = false) => {
         if (io) io.emit(`status_${reporteId}`, { msg, error, time: new Date().toLocaleTimeString() });
     };
@@ -61,6 +61,22 @@ export async function automatizarAportesEnLinea(page, contratista, reporte, io, 
         if (resuelto) {
             console.info(`${getTimestamp()} \x1b[32m[SUCCESS]\x1b[0m ✅ reCAPTCHA superado, generando descarga...`);
             enviarEstado("reCAPTCHA superado. Generando descarga del archivo...");
+
+            // --- VALIDACIÓN DE ERROR ANTES DE CLIC ---
+            const errorVisible = await page.evaluate(() => {
+                const bodyText = document.body.innerText.toLowerCase();
+                return bodyText.includes('error') || bodyText.includes('incorrecto') || bodyText.includes('no existe') || bodyText.includes('no se encontró');
+            });
+
+            if (errorVisible) {
+                console.error(`${getTimestamp()} \x1b[31m[ERROR]\x1b[0m ❌ Se detectó un error en Aportes en Línea.`);
+                enviarEstado("Error detectado en el portal. Cancelando descarga.", true);
+                throw new Error("Error detectado en el portal antes de descargar");
+            }
+
+            // Si llegamos aquí, permitimos la descarga
+            if (permitirDescarga) permitirDescarga();
+
             await page.click('#contenido_btnCalcular');
             enviarEstado("Botón de descarga pulsado. Procesando...");
             // Esperamos un momento para que el controlador central capture el evento
