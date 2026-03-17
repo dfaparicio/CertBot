@@ -26,14 +26,7 @@ export const DOC_CODES = {
     'Asopagos': { 'Cédula de ciudadania': 'CC', 'Cédula de Ciudadanía': 'CC', 'Cédula de extranjería': 'CE', 'Cédula de Extranjería': 'CE', 'Tarjeta de identidad': 'TI', 'NIT': 'NI', 'Pasaporte': 'PA' }
 };
 
-export const esperarAleatorio = (min = 500, max = 1500) =>
-    new Promise(resolve => setTimeout(resolve, Math.floor(Math.random() * (max - min + 1) + min)));
 
-export async function escribirHumano(page, selector, texto) {
-    if (!texto) return;
-    await page.focus(selector);
-    await page.type(selector, texto.toString(), { delay: Math.random() * (120 - 40) + 40 });
-}
 
 const getTimestamp = () => `[\x1b[90m${new Date().toLocaleTimeString()}\x1b[0m]`;
 
@@ -45,14 +38,14 @@ const enviarEstado = (io, reporteId, msg, error = false) => {
 
 export const encolarReporte = (reporteId, pagina, io, intentos = 0) => {
     const taskKey = `${pagina}_${reporteId}`;
-    
+
     if (reportesEnProceso.has(taskKey) && intentos === 0) {
         const tareaActual = colaTareas.find(t => t.taskKey === taskKey);
         if (tareaActual) {
             tareaActual.io = io;
         }
         enviarEstado(io, reporteId, "La tarea ya está en proceso, sincronizando...");
-        return true; 
+        return true;
     }
 
     colaTareas.push({ reporteId, pagina, taskKey, io, intentos });
@@ -74,18 +67,18 @@ async function procesarCola() {
     if (botTrabajando || colaTareas.length === 0) return;
     botTrabajando = true;
     const { reporteId, pagina, taskKey, io, intentos } = colaTareas.shift();
-    
+
     console.group(`\n${getTimestamp()} \x1b[35m[PROCESS]\x1b[0m 🤖 Automatización: ${pagina} (Intento ${intentos + 1}/3)`);
-    
+
     try {
         await procesarReporte(reporteId, pagina, taskKey, io);
     } catch (err) {
         console.error(`${getTimestamp()} \x1b[31m[ERROR]\x1b[0m ❌ Fallo en el intento ${intentos + 1}:`, err.message);
-        
+
         if (intentos < 2) { // 3 intentos en total (0, 1, 2)
             const waitTime = 5000;
-            enviarEstado(io, reporteId, `Error en intento ${intentos + 1}. Reintentando en ${waitTime/1000}s...`);
-            
+            enviarEstado(io, reporteId, `Error en intento ${intentos + 1}. Reintentando en ${waitTime / 1000}s...`);
+
             setTimeout(() => {
                 reportesEnProceso.delete(taskKey);
                 encolarReporte(reporteId, pagina, io, intentos + 1);
@@ -125,7 +118,7 @@ const procesarReporte = async (reporteId, pagina, taskKey, io) => {
 
         const docNum = contratista.numero_documento;
         const nombreC = `${contratista.nombre} ${contratista.apellidos}`.trim();
-        
+
         console.info(`${getTimestamp()} \x1b[34m[INFO]\x1b[0m Datos Clave: ${nombreC} (${docNum})`);
         enviarEstado(io, reporteId, `Iniciando bot para ${nombreC}...`);
 
@@ -134,7 +127,7 @@ const procesarReporte = async (reporteId, pagina, taskKey, io) => {
 
         const context = await browser.newContext();
         const page = await context.newPage();
-        
+
         const downloadPath = path.join(process.cwd(), 'descargas');
         if (!fs.existsSync(downloadPath)) fs.mkdirSync(downloadPath, { recursive: true });
 
@@ -184,14 +177,14 @@ const procesarReporte = async (reporteId, pagina, taskKey, io) => {
 
             const suggestedFileName = download.suggestedFilename();
             console.log(`📄 [DEBUG] Archivo sugerido por el portal: ${suggestedFileName}`);
-            
+
             const extension = suggestedFileName.split('.').pop() || 'pdf';
             const fileName = `${nombre}_${apellido}_${docNum}.${extension}`;
             const fullPath = path.join(downloadPath, fileName);
 
             console.log(`💾 [DEBUG] Guardando archivo en disco: ${fullPath}`);
             await download.saveAs(fullPath);
-            
+
             if (fs.existsSync(fullPath)) {
                 console.log('✅ [DEBUG] Archivo guardado correctamente. Iniciando manejarArchivo...');
                 await manejarArchivo(fullPath, fileName);
@@ -202,7 +195,7 @@ const procesarReporte = async (reporteId, pagina, taskKey, io) => {
 
         context.on('page', async (newPage) => {
             console.log(`✨ [DEBUG] Nueva ventana detectada: ${newPage.url()}`);
-            
+
             // Esperamos un momento para ver si la nueva página es una descarga
             const response = await newPage.waitForResponse(res => {
                 const isPdf = res.url().toLowerCase().endsWith('.pdf') || res.headers()['content-type']?.includes('application/pdf');
@@ -219,10 +212,10 @@ const procesarReporte = async (reporteId, pagina, taskKey, io) => {
                 const isZip = response.url().toLowerCase().endsWith('.zip') || response.headers()['content-type']?.includes('zip');
                 const extension = isZip ? 'zip' : 'pdf';
                 const suffix = isZip ? '' : '_V';
-                
+
                 const fileName = `${nombre}_${apellido}_${docNum}${suffix}.${extension}`;
                 const fullPath = path.join(downloadPath, fileName);
-                
+
                 console.log(`💾 [DEBUG] Guardando archivo desde flujo de red: ${fileName}`);
                 fs.writeFileSync(fullPath, await response.body());
                 await manejarArchivo(fullPath, fileName);
@@ -233,21 +226,21 @@ const procesarReporte = async (reporteId, pagina, taskKey, io) => {
 
 
         switch (pagina) {
-            case 'Aportes en Línea': 
+            case 'Aportes en Línea':
                 enviarEstado(io, reporteId, "Accediendo a Aportes en Línea...");
-                await automatizarAportesEnLinea(page, contratista, reporte, io, reporteId); 
+                await automatizarAportesEnLinea(page, contratista, reporte, io, reporteId);
                 break;
-            case 'Mi Planilla': 
+            case 'Mi Planilla':
                 enviarEstado(io, reporteId, "Accediendo a Mi Planilla...");
-                await automatizarMiPlanilla(page, contratista, reporte, io, reporteId); 
+                await automatizarMiPlanilla(page, contratista, reporte, io, reporteId);
                 break;
-            case 'SOI': 
+            case 'SOI':
                 enviarEstado(io, reporteId, "Accediendo a SOI...");
-                await automatizarSOI(page, contratista, reporte, manejarArchivo, io, reporteId); 
+                await automatizarSOI(page, contratista, reporte, manejarArchivo, io, reporteId);
                 break;
-            case 'Asopagos': 
+            case 'Asopagos':
                 enviarEstado(io, reporteId, "Accediendo a Asopagos...");
-                await automatizarAsopagos(page, contratista, reporte, manejarArchivo, io, reporteId); 
+                await automatizarAsopagos(page, contratista, reporte, manejarArchivo, io, reporteId);
                 break;
         }
 

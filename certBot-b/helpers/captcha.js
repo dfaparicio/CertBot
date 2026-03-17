@@ -1,6 +1,6 @@
 import axios from 'axios';
 import FormData from 'form-data';
-import { escribirHumano } from '../middlewares/automatizacion.js';
+import { escribirHumano } from './botUtils.js';
 
 const getTimestamp = () => `[\x1b[90m${new Date().toLocaleTimeString()}\x1b[0m]`;
 

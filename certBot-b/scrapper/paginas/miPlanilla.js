@@ -1,8 +1,8 @@
 import path from 'path';
 import fs from 'fs';
-import { escribirHumano, DOC_CODES, esperarAleatorio } from '../../../helpers/botUtils.js';
-import { resolverCaptcha } from '../../../helpers/captcha.js';
-import { convertirImagenAPDF, manejarSubidaADrive } from '../../../helpers/descargas.js';
+import { escribirHumano, DOC_CODES, esperarAleatorio } from '../../helpers/botUtils.js';
+import { resolverCaptcha } from '../../helpers/captcha.js';
+import { convertirImagenAPDF, manejarSubidaADrive } from '../../helpers/descargas.js';
 
 const getTimestamp = () => `[\x1b[90m${new Date().toLocaleTimeString()}\x1b[0m]`;
 
