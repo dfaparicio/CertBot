@@ -1,3 +1,4 @@
+import cron from 'node-cron';
 import { MiPlanilla, Soi, AportesEnLinea, Asopagos } from '../models/reportes.js';
 import { encolarReporte } from './automatizacion.js';
 
@@ -11,13 +12,14 @@ const MODELOS = {
 let socketIo = null;
 
 export const iniciarDisparador = (io) => {
-    socketIo = io; // Guardamos el socket
-    console.log('⏰ Disparador del Bot activado (Cada 1 minuto)');
+    socketIo = io; // Guardamos el socket por si hay alguien conectado, aunque sea a las 2am
+    console.log('⏰ Programación del Bot activada (Diariamente a las 2:00 AM)');
 
-    revisarReportesPendientes();
-    setInterval(() => {
+    // Programar la tarea para las 2:00 AM todos los días
+    cron.schedule('0 2 * * *', () => {
+        console.log('🚀 Iniciando ejecución programada de las 2:00 AM...');
         revisarReportesPendientes();
-    }, 1 * 60 * 1000);
+    });
 };
 
 const revisarReportesPendientes = async () => {
@@ -31,12 +33,13 @@ const revisarReportesPendientes = async () => {
                 console.log(`📂 Encontrados ${pendientes.length} pendientes en ${nombrePagina}`);
 
                 for (const reporte of pendientes) {
-                    // Ahora pasamos socketIo para que avise al frontend si alguien está escuchando
+                    // Se encolan de forma secuencial mediante el sistema de cola existente
                     encolarReporte(reporte._id.toString(), nombrePagina, socketIo);
                 }
             }
         }
     } catch (error) {
-        console.error('❌ Error en el disparador:', error.message);
+        console.error('❌ Error en el disparador programado:', error.message);
     }
 };
+

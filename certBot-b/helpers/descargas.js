@@ -4,6 +4,11 @@ import AdmZip from 'adm-zip';
 import { PDFDocument } from 'pdf-lib';
 import { subirADrive } from './googleDrive.js';
 
+const MESES = [
+    "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+    "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+];
+
 const getTimestamp = () => `[\x1b[90m${new Date().toLocaleTimeString()}\x1b[0m]`;
 
 /**
@@ -12,8 +17,19 @@ const getTimestamp = () => `[\x1b[90m${new Date().toLocaleTimeString()}\x1b[0m]`
 export const manejarSubidaADrive = async (fullPath, fileName, reporte, contratista) => {
     try {
         console.info(`${getTimestamp()} \x1b[34m[FILE]\x1b[0m 🚀 Preparando subida a Drive: \x1b[36m${fileName}\x1b[0m`);
-        const anio = reporte.ano || new Date().getFullYear();
-        const mesNombre = reporte.mes_inicio || "Mes_Sin_Definir";
+        
+        // El usuario quiere que si el periodo es Enero, se guarde en Febrero (mes siguiente)
+        let mesNumero = parseInt(reporte.mes_inicio, 10) || new Date().getMonth() + 1;
+        let anio = parseInt(reporte.ano, 10) || new Date().getFullYear();
+
+        // Lógica de mes siguiente
+        mesNumero++;
+        if (mesNumero > 12) {
+            mesNumero = 1;
+            anio++;
+        }
+
+        const mesNombre = MESES[mesNumero - 1];
         const supervisor = contratista.supervisorId;
         const supervisorName = supervisor ? `${supervisor.nombre} ${supervisor.apellidos}`.trim() : "Supervisor_General";
 

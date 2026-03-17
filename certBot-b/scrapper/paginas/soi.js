@@ -1,5 +1,5 @@
 import path from 'path';
-import { escribirHumano, DOC_CODES, esperarAleatorio } from '../../helpers/botUtils.js';
+import { escribirHumano, DOC_CODES, esperarAleatorio } from '../../../helpers/botUtils.js';
 
 const getTimestamp = () => `[\x1b[90m${new Date().toLocaleTimeString()}\x1b[0m]`;
 

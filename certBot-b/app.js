@@ -8,7 +8,7 @@ import conectarMongo from "./database/config.js";
 import authRoute from "./routes/auth.js";
 import reporteRoute from "./routes/reporte.js";
 
-import { iniciarDisparador } from "./middlewares/disparador.js";
+import { iniciarDisparador } from "./scrapper/disparador.js";
 
 const app = express();
 const httpServer = createServer(app);

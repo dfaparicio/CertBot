@@ -1,5 +1,5 @@
-import { escribirHumano, DOC_CODES, esperarAleatorio } from '../../helpers/botUtils.js';
-import { resolverReCaptcha } from '../../helpers/captcha.js';
+import { escribirHumano, DOC_CODES, esperarAleatorio } from '../../../helpers/botUtils.js';
+import { resolverReCaptcha } from '../../../helpers/captcha.js';
 
 const getTimestamp = () => `[\x1b[90m${new Date().toLocaleTimeString()}\x1b[0m]`;
 

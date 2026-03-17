@@ -55,26 +55,26 @@ const obtenerOCrearCarpeta = async (nombre, parentId) => {
 };
 
 /**
- * Sube el archivo a la estructura: Año > Mes > Supervisor
+ * Sube el archivo a la estructura: Supervisor > Año > Mes
  */
 export const subirADrive = async (filePath, fileName, supervisorName, mes, anio) => {
     try {
         const rootId = process.env.GOOGLE_DRIVE_FOLDER_ID;
 
-        // 1. Obtener o crear carpeta del Año (ej: 2026)
-        const anioId = await obtenerOCrearCarpeta(anio.toString(), rootId);
+        // 1. Obtener o crear carpeta del Supervisor
+        const supervisorId = await obtenerOCrearCarpeta(supervisorName.replace(/ /g, '_'), rootId);
 
-        // 2. Obtener o crear carpeta del Mes (ej: Enero)
+        // 2. Obtener o crear carpeta del Año
+        const anioId = await obtenerOCrearCarpeta(anio.toString(), supervisorId);
+
+        // 3. Obtener o crear carpeta del Mes
         const mesId = await obtenerOCrearCarpeta(mes, anioId);
-
-        // 3. Obtener o crear carpeta del Supervisor
-        const supervisorId = await obtenerOCrearCarpeta(supervisorName.replace(/ /g, '_'), mesId);
 
         // 4. Subir el archivo
         console.info(`${getTimestamp()} \x1b[35m[DRIVE]\x1b[0m ☁️ Subiendo archivo a la nube...`);
         const fileMetadata = {
             name: fileName,
-            parents: [supervisorId],
+            parents: [mesId],
         };
 
         const media = {

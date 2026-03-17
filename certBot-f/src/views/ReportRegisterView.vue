@@ -168,45 +168,6 @@
     </q-page-container>
     <AppFooter />
 
-    <!-- DIÁLOGO DE PROGRESO DEL BOT -->
-    <q-dialog v-model="showBotDialog" persistent backdrop-filter="blur(4px)">
-      <q-card style="width: 500px; max-width: 90vw; border-radius: 16px;">
-        <q-card-section class="row items-center q-pb-none">
-          <div class="text-h6 text-sena-navy text-weight-bolder">Procesando Automatización</div>
-          <q-space />
-          <q-btn icon="close" flat round dense v-close-popup>
-            <q-tooltip>Ocultar y seguir en segundo plano</q-tooltip>
-          </q-btn>
-        </q-card-section>
-
-        <q-card-section class="text-center q-pa-xl">
-          <q-spinner-gears v-if="!botError && !botStatus.toLowerCase().includes('finaliza')" color="primary" size="80px" class="q-mb-md" />
-          <q-icon v-else-if="botError" name="error" color="red" size="80px" class="q-mb-md" />
-          <q-icon v-else name="check_circle" color="green" size="80px" class="q-mb-md" />
-          
-          <div :class="['text-h6 q-mt-md', botError ? 'text-red' : 'text-sena-navy']">
-            {{ botStatus }}
-          </div>
-          <p class="text-caption text-grey-7" v-if="!botStatus.toLowerCase().includes('finaliza')">
-            Puede ocultar esta ventana, el bot seguirá trabajando.
-          </p>
-        </q-card-section>
-
-        <q-card-section>
-          <div class="text-weight-bold q-mb-xs text-grey-9">Logs del Bot:</div>
-          <div class="bot-log-container shadow-1">
-            <div v-for="(log, index) in botLogs" :key="index" :class="['log-item', log.error ? 'log-error' : '']">
-              <span class="text-grey-6 text-caption">[{{ log.time }}]</span> {{ log.msg }}
-            </div>
-          </div>
-        </q-card-section>
-
-        <q-card-actions align="right" class="q-pa-md">
-          <q-btn outline label="Seguir en segundo plano" color="primary" v-close-popup v-if="!botStatus.toLowerCase().includes('finaliza')" />
-          <q-btn unelevated label="Entendido" color="primary" v-else v-close-popup />
-        </q-card-actions>
-      </q-card>
-    </q-dialog>
 
   </q-layout>
 </template>
@@ -215,7 +176,6 @@
 import { reactive, ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
-import { io } from 'socket.io-client'
 import { postData, getData } from '../services/api'
 import { useMainStore } from '../store/store'
 import AppHeader from '../components/AppHeader.vue'
@@ -228,15 +188,6 @@ const store = useMainStore()
 const loading = ref(false)
 const loadingSupervisores = ref(false)
 const supervisores = ref([])
-
-// Estados para el Feedback del Bot
-const showBotDialog = ref(false)
-const botLogs = ref([])
-const botStatus = ref('Esperando al bot...')
-const botError = ref(false)
-let socket = null
-
-// Estados para el Historial
 const myReports = ref([])
 const loadingHistory = ref(false)
 
@@ -279,19 +230,6 @@ const supervisoresOptions = computed(() => {
   }))
 })
 
-const setupSocket = (reporteId) => {
-  socket = io('http://localhost:3000')
-  
-  socket.on(`status_${reporteId}`, (data) => {
-    botLogs.value.unshift(data)
-    botStatus.value = data.msg
-    botError.value = data.error
-    
-    if (data.error || data.msg.toLowerCase().includes('finaliza')) {
-      fetchMyReports()
-    }
-  })
-}
 
 const fetchSupervisores = async () => {
   loadingSupervisores.value = true
@@ -330,7 +268,7 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-  if (socket) socket.disconnect()
+  // socket logic removed
 })
 
 const colReports = [
@@ -379,20 +317,16 @@ const submitReporte = async () => {
 
     const res = await postData('/reporte/crear', payload)
     
-    if (res.ok && res.reporte?._id) {
-      botLogs.value = []
-      botError.value = false
-      botStatus.value = 'Preparando entorno...'
-      showBotDialog.value = true
-      setupSocket(res.reporte._id)
+    if (res.ok) {
+      $q.notify({
+        type: 'positive',
+        message: 'Reporte registrado exitosamente para su procesamiento.',
+        position: 'top-right',
+        timeout: 4000
+      })
       
       fetchMyReports()
-
-      await postData('/reporte/automatizar', {
-        reporteId: res.reporte._id,
-        pagina: formData.pagina
-      })
-
+      
       formData.pagina = ''
       formData.valor_planilla = null
     }
@@ -412,24 +346,6 @@ const submitReporte = async () => {
 <style scoped>
 @import "../styles/report.css";
 
-.bot-log-container {
-  max-height: 200px;
-  overflow-y: auto;
-  border-radius: 8px;
-  background: #f8f9fa;
-  padding: 10px;
-  font-family: monospace;
-}
-.log-item {
-  margin-bottom: 5px;
-  font-size: 0.85rem;
-  border-left: 3px solid #ddd;
-  padding-left: 8px;
-}
-.log-error {
-  border-left-color: #f44336;
-  color: #d32f2f;
-}
 .compact-table :deep(thead tr th) {
   background-color: #f8f9fa;
   font-weight: 700;
