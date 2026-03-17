@@ -63,9 +63,12 @@ export async function automatizarAportesEnLinea(page, contratista, reporte, io, 
             enviarEstado("reCAPTCHA superado. Generando descarga del archivo...");
             await page.click('#contenido_btnCalcular');
             enviarEstado("Botón de descarga pulsado. Procesando...");
+            // Esperamos un momento para que el controlador central capture el evento
+            await page.waitForTimeout(5000);
         } else {
             console.error(`${getTimestamp()} \x1b[31m[ERROR]\x1b[0m ❌ No se pudo resolver el reCAPTCHA.`);
             enviarEstado("No se pudo resolver el reCAPTCHA.", true);
+            throw new Error("No se pudo superar el reCAPTCHA de Aportes en Línea");
         }
     } catch (err) {
         console.error(`${getTimestamp()} \x1b[31m[ERROR]\x1b[0m ❌ Error en Aportes en Línea:`, err.message);

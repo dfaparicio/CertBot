@@ -72,25 +72,13 @@ export async function automatizarSOI(page, contratista, reporte, manejarArchivo,
         enviarEstado("Iniciando generación de descarga en SOI...");
         await page.waitForSelector('button.btn-success');
         
-        // Iniciamos la escucha del evento ANTES del clic
-        const downloadPromise = page.waitForEvent('download', { timeout: 45000 }).catch(() => null);
-        
+        // El controlador central en automatizacion.js capturará el evento 'download'
         await page.click('button.btn-success');
 
-        const download = await downloadPromise;
-        if (download && manejarArchivo) {
-            console.info(`${getTimestamp()} \x1b[35m[FILE]\x1b[0m 📥 Descarga capturada de SOI.`);
-            enviarEstado("Descarga capturada. Procesando archivo...");
-            const suggestedFileName = download.suggestedFilename();
-            const extension = suggestedFileName.split('.').pop() || 'zip';
-            const fileName = `${contratista.nombre}_${contratista.apellidos}_${contratista.numero_documento}.${extension}`.replace(/\s+/g, '_');
-            const downloadPath = path.join(process.cwd(), 'descargas');
-            const fullPath = path.join(downloadPath, fileName);
-            
-            await download.saveAs(fullPath);
-            await manejarArchivo(fullPath, fileName);
-            enviarEstado("¡Reporte de SOI procesado y subido!");
-        }
+        // Esperar un momento razonable para que el portal responda y el controlador central capture el archivo
+        await page.waitForTimeout(8000); 
+        console.info(`${getTimestamp()} \x1b[34m[BOT]\x1b[0m 📜 Transacción en SOI completada.`);
+
     } catch (err) {
         console.error(`${getTimestamp()} \x1b[31m[ERROR]\x1b[0m ❌ Error en portal SOI:`, err.message);
         enviarEstado("Error crítico en el portal de SOI.", true);

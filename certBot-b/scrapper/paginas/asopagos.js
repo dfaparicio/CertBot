@@ -83,60 +83,25 @@ export async function automatizarAsopagos(page, contratista, reporte, manejarArc
             }
 
             if (resultado.tipo === 'download') {
-                const download = resultado.data;
-                console.info(`${getTimestamp()} \x1b[35m[FILE]\x1b[0m 📥 Descarga directa interceptada.`);
-                enviarEstado("Descarga directa interceptada. Procesando archivo...");
-                const suggestedFileName = download.suggestedFilename();
-                const extension = suggestedFileName.split('.').pop() || 'pdf';
-                const fileName = `${contratista.nombre}_${contratista.apellidos}_${contratista.numero_documento}.${extension}`.replace(/\s+/g, '_');
-                const fullPath = path.join(process.cwd(), 'descargas', fileName);
-                await download.saveAs(fullPath);
-                await manejarArchivo(fullPath, fileName);
-                enviarEstado("¡Reporte de Asopagos procesado!");
+                console.info(`${getTimestamp()} \x1b[35m[FILE]\x1b[0m 📥 Descarga directa interceptada por el controlador central.`);
+                enviarEstado("Descarga interceptada. El controlador procesará el archivo.");
+                // No llamamos a manejarArchivo aquí porque el listener central lo hará
                 return;
             }
 
             if (resultado.tipo === 'page') {
                 const newPage = resultado.data;
-                console.info(`${getTimestamp()} \x1b[35m[FILE]\x1b[0m ✨ Nueva pestaña detectada. Capturando PDF...`);
-                enviarEstado("Nueva pestaña detectada. Capturando PDF del reporte...");
-
-                // Esperar a que la nueva pestaña cargue y buscar el PDF
-                const response = await newPage.waitForResponse(
-                    res => res.url().toLowerCase().endsWith('.pdf') || (res.headers()['content-type'] || '').includes('pdf'),
-                    { timeout: 25000 }
-                ).catch(() => null);
-
-                if (response && manejarArchivo) {
-                    const fileName = `${contratista.nombre}_${contratista.apellidos}_${contratista.numero_documento}_V.pdf`.replace(/\s+/g, '_');
-                    const fullPath = path.join(process.cwd(), 'descargas', fileName);
-                    fs.writeFileSync(fullPath, await response.body());
-                    await manejarArchivo(fullPath, fileName);
-                    await newPage.close();
-                    enviarEstado("¡Reporte de Asopagos procesado desde nueva pestaña!");
-                    return;
-                }
-
-                // Si la nueva pestaña no trajo un PDF directamente, intentar descarga desde ella
-                const dlFromPage = await newPage.waitForEvent('download', { timeout: 15000 }).catch(() => null);
-                if (dlFromPage && manejarArchivo) {
-                    const suggestedFileName = dlFromPage.suggestedFilename();
-                    const extension = suggestedFileName.split('.').pop() || 'pdf';
-                    const fileName = `${contratista.nombre}_${contratista.apellidos}_${contratista.numero_documento}_V.${extension}`.replace(/\s+/g, '_');
-                    const fullPath = path.join(process.cwd(), 'descargas', fileName);
-                    await dlFromPage.saveAs(fullPath);
-                    await manejarArchivo(fullPath, fileName);
-                    await newPage.close();
-                    enviarEstado("¡Reporte de Asopagos procesado desde nueva pestaña (descarga)!");
-                    return;
-                }
-
-                console.warn(`${getTimestamp()} \x1b[33m[BOT]\x1b[0m ⚠️ La nueva pestaña no trajo ningún archivo.`);
-                enviarEstado("La nueva pestaña no entregó ningún archivo.", true);
+                console.info(`${getTimestamp()} \x1b[35m[FILE]\x1b[0m ✨ Nueva pestaña detectada.`);
+                enviarEstado("Nueva pestaña detectada. El controlador central buscará el PDF...");
+                
+                // Le damos tiempo al controlador central en automatizacion.js para que detecte el PDF en esta nueva pestaña
+                await page.waitForTimeout(5000); 
+                return;
             }
         } else {
             console.error(`${getTimestamp()} \x1b[31m[ERROR]\x1b[0m ❌ No se pudo resolver el captcha.`);
             enviarEstado("No se pudo resolver el captcha.", true);
+            throw new Error("Captcha no resuelto");
         }
     } catch (err) {
         console.error(`${getTimestamp()} \x1b[31m[ERROR]\x1b[0m ❌ Error en portal Asopagos:`, err.message);

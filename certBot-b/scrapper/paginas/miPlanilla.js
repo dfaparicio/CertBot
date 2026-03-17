@@ -6,7 +6,7 @@ import { convertirImagenAPDF, manejarSubidaADrive } from '../../helpers/descarga
 
 const getTimestamp = () => `[\x1b[90m${new Date().toLocaleTimeString()}\x1b[0m]`;
 
-export async function automatizarMiPlanilla(page, contratista, reporte, io, reporteId) {
+export async function automatizarMiPlanilla(page, contratista, reporte, manejarArchivo, io, reporteId) {
     const enviarEstado = (msg, error = false) => {
         if (io) io.emit(`status_${reporteId}`, { msg, error, time: new Date().toLocaleTimeString() });
     };
@@ -74,20 +74,21 @@ export async function automatizarMiPlanilla(page, contratista, reporte, io, repo
                 enviarEstado("Convirtiendo evidencia a formato PDF...");
                 const exitoPdf = await convertirImagenAPDF(screenshotBuffer, fullPathPdf);
                 
-                if (exitoPdf) {
-                    enviarEstado("Subiendo evidencia a Google Drive...");
-                    await manejarSubidaADrive(fullPathPdf, fileNamePdf, reporte, contratista);
-                    enviarEstado("¡Evidencia subida y reporte finalizado!", false);
+                if (exitoPdf && manejarArchivo) {
+                    await manejarArchivo(fullPathPdf, fileNamePdf);
+                    enviarEstado("Evidencia capturada correctamente.");
                 }
 
             } catch (e) {
                 console.error(`${getTimestamp()} \x1b[31m[ERROR]\x1b[0m ❌ Error al procesar captura en Mi Planilla:`, e.message);
                 enviarEstado("Error al generar la evidencia visual.", true);
+                throw e;
             }
 
         } else {
             console.error(`${getTimestamp()} \x1b[31m[ERROR]\x1b[0m ❌ No se pudo resolver el captcha.`);
             enviarEstado("No se pudo resolver el captcha tras varios intentos.", true);
+            throw new Error("Captcha no resuelto");
         }
     } catch (err) {
         console.error(`${getTimestamp()} \x1b[31m[ERROR]\x1b[0m ❌ Error en portal Mi Planilla:`, err.message);

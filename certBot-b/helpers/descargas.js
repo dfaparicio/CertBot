@@ -12,17 +12,15 @@ const MESES = [
 const getTimestamp = () => `[\x1b[90m${new Date().toLocaleTimeString()}\x1b[0m]`;
 
 /**
- * Procesa la subida de un archivo a Google Drive y actualiza el estado del reporte
+ * Procesa la subida de un archivo a Google Drive y opcionalmente actualiza el estado del reporte
  */
-export const manejarSubidaADrive = async (fullPath, fileName, reporte, contratista) => {
+export const manejarSubidaADrive = async (fullPath, fileName, reporte, contratista, actualizarEstado = false) => {
     try {
         console.info(`${getTimestamp()} \x1b[34m[FILE]\x1b[0m 🚀 Preparando subida a Drive: \x1b[36m${fileName}\x1b[0m`);
         
-        // El usuario quiere que si el periodo es Enero, se guarde en Febrero (mes siguiente)
         let mesNumero = parseInt(reporte.mes_inicio, 10) || new Date().getMonth() + 1;
         let anio = parseInt(reporte.ano, 10) || new Date().getFullYear();
 
-        // Lógica de mes siguiente
         mesNumero++;
         if (mesNumero > 12) {
             mesNumero = 1;
@@ -35,23 +33,24 @@ export const manejarSubidaADrive = async (fullPath, fileName, reporte, contratis
 
         await subirADrive(fullPath, fileName, supervisorName, mesNombre, anio);
         
-        // Actualizamos los campos directamente en el objeto reporte
-        reporte.estado_descarga = true;
-        reporte.estado = 'Aprobado';
-        
-        // Guardamos los cambios
-        await reporte.save();
-        
-        console.info(`${getTimestamp()} \x1b[32m[SUCCESS]\x1b[0m ✅ Reporte subido y actualizado en Base de Datos.`);
+        if (actualizarEstado) {
+            reporte.estado_descarga = true;
+            reporte.estado = 'Aprobado';
+            await reporte.save();
+            console.info(`${getTimestamp()} \x1b[32m[SUCCESS]\x1b[0m ✅ Reporte subido y actualizado en Base de Datos.`);
+        } else {
+            console.info(`${getTimestamp()} \x1b[32m[SUCCESS]\x1b[0m ✅ Reporte subido a Drive (Estado DB sin cambios).`);
+        }
     } catch (err) {
         console.error(`${getTimestamp()} \x1b[31m[ERROR]\x1b[0m ❌ Error en el proceso de subida:`, err.message);
+        throw err; // Re-lanzar para control centralizado
     }
 };
 
 /**
  * Descomprime un archivo ZIP y procesa cada archivo interno
  */
-export const procesarZip = async (fullPath, fileName, downloadPath, nombreLimpio, docNum, reporte, contratista) => {
+export const procesarZip = async (fullPath, fileName, downloadPath, nombreLimpio, docNum, reporte, contratista, actualizarEstado = false) => {
     console.info(`${getTimestamp()} \x1b[35m[FILE]\x1b[0m 📦 Descomprimiendo archivo ZIP: \x1b[36m${fileName}\x1b[0m`);
     const zip = new AdmZip(fullPath);
     const zipEntries = zip.getEntries();
@@ -81,7 +80,7 @@ export const procesarZip = async (fullPath, fileName, downloadPath, nombreLimpio
 
             if (fs.existsSync(extractionPath)) {
                 fs.renameSync(extractionPath, actualFinalFullPath);
-                await manejarSubidaADrive(actualFinalFullPath, actualFinalFileName, reporte, contratista);
+                await manejarSubidaADrive(actualFinalFullPath, actualFinalFileName, reporte, contratista, actualizarEstado);
             }
         }
     }
